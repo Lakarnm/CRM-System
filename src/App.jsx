@@ -1,20 +1,42 @@
-import {useState} from 'react'
+import { useState, useEffect} from 'react'
 import './App.css'
 import Form from "./components/Form/Form.jsx";
 import Checkbox from "./components/Checkbox/Checkbox.jsx";
+import { fetchTodos, getTodoById, addTodo, updateTodo, deleteTodo } from "./api/api.js";
 
 function App() {
-    const [todos, setTodos] = useState([]);
+    const [allTodos, setAllTodos] = useState([]);
+    const [filteredTodos, setFilteredTodos] = useState([]);
     const [filterStatus, setFilterStatus] = useState("all");
     const [editingTodo, setEditingTodo] = useState(null);
     const [editingText, setEditingText] = useState("");
 
-    const allTodos = todos.length;
-    const allCompleted = todos.filter(todo => todo.done).length;
-    const allUncompleted = allTodos - allCompleted;
+    const totalCount = allTodos.length;
+    const completedCount = allTodos.filter(todo => todo.isDone).length;
+    const uncompletedCount = totalCount - completedCount;
 
+    useEffect(() => {
+        async function loadAllTodos() {
+            try {
+                const data = await fetchTodos("all");
+                setAllTodos(data.data);
+            } catch (error) {
+                console.error("Loading todos error:", error);
+            }
+        }
+        loadAllTodos();
+    }, []);
 
-    const putTodo = (value) => {
+    useEffect(() => {
+        const filtered = allTodos.filter(todo => {
+            if (filterStatus === "uncompleted") return !todo.isDone;
+            if (filterStatus === "completed") return todo.isDone;
+            return true;
+        });
+        setFilteredTodos(filtered);
+    }, [filterStatus, allTodos]);
+
+    const putTodo = async (value) => {
         if (!value.trim()) {
             alert("Fill out the form");
             return;
@@ -25,20 +47,35 @@ function App() {
             return;
         }
 
-        setTodos(prevTodos => [...prevTodos, { id: Date.now(), text: value, done: false }]);
+        try {
+            const newTodo = await addTodo(value);
+            setAllTodos(prevTodos => [...prevTodos, newTodo]);
+        } catch (error) {
+            console.error("Error adding todo:", error);
+        }
     };
 
-
-    const toggleTodo = (id) => {
-        setTodos(prevTodos =>
-            prevTodos.map(todo =>
-                todo.id === id ? { ...todo, done: !todo.done } : todo
-            )
-        );
+    const toggleTodo = async (id) => {
+        try {
+            const todo = allTodos.find(todo => todo.id === id);
+            const updatedTodo = await updateTodo(id, todo.title, !todo.isDone);
+            setAllTodos(prevTodos =>
+                prevTodos.map(todo =>
+                    todo.id === id ? updatedTodo : todo
+                )
+            );
+        } catch (error) {
+            console.error("Todo update error:", error);
+        }
     };
 
-    const removeTodo = (id) => {
-        setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
+    const removeTodo = async (id) => {
+        try {
+            await deleteTodo(id);
+            setAllTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
+        } catch (error) {
+            console.error("Error deleting todo:", error);
+        }
     };
 
     const startEditing = (id, text) => {
@@ -46,29 +83,25 @@ function App() {
         setEditingText(text);
     }
 
-    const saveEditing = (id) => {
+    const saveEditing = async (id) => {
         if (!editingText.trim()) {
-            alert("The todo text can't be empty");
+            alert("The todo's text can't be empty");
             return;
         }
-
-        setTodos(prevTodos => prevTodos.map(todo =>
-            todo.id === id ? { ...todo,text: editingText} : todo));
-
-        setEditingTodo(null);
-        setEditingText("");
+        try {
+            const updatedTodo = await updateTodo(id, editingText, allTodos.find(t => t.id === id).isDone);
+            setAllTodos(prevTodos => prevTodos.map((todo) => todo.id === id ? updatedTodo : todo));
+            setEditingTodo(null);
+            setEditingText("");
+        } catch (error) {
+            console.error("Error editing todo:", error);
+        }
     };
 
     const cancelEditing = () => {
         setEditingTodo(null);
         setEditingText("");
     }
-
-    const filteredTodos = todos.filter(todo => {
-        if (filterStatus === "uncompleted") return !todo.done;
-        if (filterStatus === "completed") return todo.done;
-        return true;
-    });
 
     return (
         <div className="wrapper">
@@ -82,32 +115,32 @@ function App() {
                         className={`stats all ${filterStatus === "all" ? "active" : ""}`}
                         onClick={() => setFilterStatus("all")}
                     >
-                        Все: ({allTodos})
+                        Все: ({totalCount})
                     </button>
                     <button
                         className={`stats uncompleted ${filterStatus === "uncompleted" ? "active" : ""}`}
                         onClick={() => setFilterStatus("uncompleted")}
                     >
-                        В работе: ({allUncompleted})
+                        В работе: ({uncompletedCount})
                     </button>
                     <button
                         className={`stats completed ${filterStatus === "completed" ? "active" : ""}`}
                         onClick={() => setFilterStatus("completed")}
                     >
-                        Сделано: ({allCompleted})
+                        Сделано: ({completedCount})
                     </button>
                 </div>
 
                 <ul className="todos">
                     {filteredTodos.map(todo => (
-                        <li className={todo.done ? "todo done" : "todo"} key={todo.id}>
-                            <Checkbox checked={todo.done} onChange={() => toggleTodo(todo.id)}/>
+                        <li className={todo.isDone ? "todo done" : "todo"} key={todo.id}>
+                            <Checkbox checked={todo.isDone} onChange={() => toggleTodo(todo.id)}/>
 
                             {editingTodo === todo.id ?(
-                                <input className="edit-input" type="text" value={editingText} onChange={(e) => setEditingText(e.target.value)}/>
-                            ) :
+                                    <input className="edit-input" type="text" value={editingText || ""} onChange={(e) => setEditingText(e.target.value)}/>
+                                ) :
 
-                                (<span className="text-done">{todo.text}</span>)
+                                (<span className="text-done">{todo.title}</span>)
                             }
 
                             {editingTodo === todo.id ? (
@@ -119,12 +152,12 @@ function App() {
 
                                 : (
 
-                                <img
-                                    className="edit"
-                                    src="./img/svg/pen.svg"
-                                    alt="edit"
-                                    onClick={() => startEditing(todo.id,todo.text)}
-                            />)}
+                                    <img
+                                        className="edit"
+                                        src="./img/svg/pen.svg"
+                                        alt="edit"
+                                        onClick={() => startEditing(todo.id,todo.title)}
+                                    />)}
 
                             <img
                                 className="delete"
