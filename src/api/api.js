@@ -5,7 +5,8 @@ async function fetchTodos(filter = "all") {
     if (!response.ok) {
         throw new Error("Failed to fetch todos");
     }
-    return response.json();
+    const data = await response.json();
+    return { todos: data.data, info: data.info };
 }
 
 async function addTodo(title) {
@@ -14,12 +15,10 @@ async function addTodo(title) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, isDone: false }),
     });
-
     if (!response.ok) {
         throw new Error("Failed to add todo");
     }
-
-    return response.json();
+    // return response.json();
 }
 
 async function updateTodo(id, title, isDone) {
@@ -28,17 +27,14 @@ async function updateTodo(id, title, isDone) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, isDone }),
     });
-
     if (!response.ok) {
         throw new Error("Failed to update todo");
     }
-
-    return response.json();
+    // return response.json();
 }
 
 async function deleteTodo(id) {
     const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-
     if (response.status === 404) {
         throw new Error("Todo not found");
     }
