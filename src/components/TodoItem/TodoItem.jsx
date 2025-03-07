@@ -66,8 +66,12 @@ const TodoItem = ({ todo, onUpdate }) => {
                         className="close-btn-img"
                         src="./img/svg/cancel.svg"
                         alt="close"
-                        onClick={() => setIsEditing(false)}
+                        onClick={() => {
+                            setIsEditing(false);
+                            setEditingText(todo.title);
+                        }}
                     />
+
                 </>
             ) : (
                 <img
