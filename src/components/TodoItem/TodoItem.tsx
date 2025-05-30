@@ -1,17 +1,29 @@
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 import './TodoItem.css';
-import Checkbox from "../Checkbox/Checkbox.jsx";
-import { updateTodo, deleteTodo } from "../../api/api.js";
+import Checkbox from "../ui/Checkbox/Checkbox.js";
+import { updateTodo, deleteTodo } from "../../api/api";
+import { Todo } from "../../types/types"
 
-const TodoItem = ({ todo, onUpdate }) => {
+interface TodoItemProps {
+    todo: Todo;
+    onUpdate: () => void;
+}
+
+function TodoItem ({ todo, onUpdate }: TodoItemProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const [editingText, setEditingText] = useState(todo.title);
+    const [editingText, setEditingText] = useState<string>(todo.title);
 
     const saveEditing = async () => {
         if (!editingText.trim()) {
             alert("The todo's text can't be empty");
             return;
         }
+
+        if (editingText.length < 2 || editingText.length > 64) {
+            alert("The message must be between 2 and 64 characters long");
+            return;
+        }
+
         try {
             await updateTodo(todo.id, editingText, todo.isDone);
             setIsEditing(false);
@@ -41,6 +53,7 @@ const TodoItem = ({ todo, onUpdate }) => {
 
     return (
         <li className={todo.isDone ? "todo done" : "todo"}>
+            <div className="todo-left">
             <Checkbox checked={todo.isDone} onChange={toggleTodo} />
 
             {isEditing ? (
@@ -48,12 +61,14 @@ const TodoItem = ({ todo, onUpdate }) => {
                     className="edit-input"
                     type="text"
                     value={editingText}
-                    onChange={(e) => setEditingText(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setEditingText(e.target.value)}
                 />
             ) : (
                 <span className="text-done">{todo.title}</span>
             )}
+            </div>
 
+            <div className="todo-controls">
             {isEditing ? (
                 <>
                     <img
@@ -91,7 +106,8 @@ const TodoItem = ({ todo, onUpdate }) => {
                     removeTodo();
                 }}
             />
+            </div>
         </li>
-    )};
+    )}
 
 export default TodoItem;

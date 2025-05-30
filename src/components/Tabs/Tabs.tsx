@@ -1,28 +1,37 @@
-import './Tabs.css'
+import './Tabs.css';
+import { TodoInfo } from "../../types/types"
 
-function Tabs({ filterStatus, setFilterStatus, counters }) {
+interface TabsProps {
+    filterStatus: string;
+    setFilterStatus: (status: string) => void;
+    info: TodoInfo;
+}
+
+function Tabs({ filterStatus, setFilterStatus, info }: TabsProps) {
     return (
         <div className="info">
             <button
                 className={`stats all ${filterStatus === "all" ? "active" : ""}`}
                 onClick={() => setFilterStatus("all")}
             >
-                Все: ({counters.total})
+                Все: ({info.all})
             </button>
             <button
-                className={`stats uncompleted ${filterStatus === "uncompleted" ? "active" : ""}`}
-                onClick={() => setFilterStatus("uncompleted")}
+                className={`stats uncompleted ${filterStatus === "inWork" ? "active" : ""}`}
+                onClick={() => setFilterStatus("inWork")}
             >
-                В работе: ({counters.uncompleted})
+                В работе: ({info.inWork})
             </button>
             <button
                 className={`stats completed ${filterStatus === "completed" ? "active" : ""}`}
                 onClick={() => setFilterStatus("completed")}
             >
-                Сделано: ({counters.completed})
+                Сделано: ({info.completed})
             </button>
         </div>
     );
 }
 
 export default Tabs;
+
+
