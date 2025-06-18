@@ -1,6 +1,9 @@
-import './Form.css';
+import styles from './Form.module.scss';
 import { useState, FormEvent, ChangeEvent } from "react";
 import { addTodo } from "../../api/api";
+
+let minTextLength: number = 2;
+let maxTextLength: number = 64;
 
 interface FormProps {
     reloadTodos: () => void;
@@ -18,13 +21,13 @@ function Form({ reloadTodos }: FormProps) {
             return;
         }
 
-        if (value.length < 2 || value.length > 64) {
+        if (value.length < minTextLength || value.length > maxTextLength) {
             alert("The message must be between 2 and 64 characters long");
             return;
         }
 
         try {
-            await addTodo(value);
+            await addTodo({ title: value, isDone: false });
             setValue("");
             reloadTodos();
         } catch (error) {
@@ -33,15 +36,15 @@ function Form({ reloadTodos }: FormProps) {
     };
 
     return (
-        <form className="form" onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={handleSubmit}>
             <input
                 type="text"
                 placeholder="Task To Be Done..."
-                className="todo-input"
+                className={styles['todo-input']}
                 value={value}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
             />
-            <button className="add" type="submit">Add</button>
+            <button className={styles.add} type="submit">Add</button>
         </form>
     );
 }

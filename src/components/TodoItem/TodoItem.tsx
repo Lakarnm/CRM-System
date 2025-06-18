@@ -1,31 +1,49 @@
-import { useState, ChangeEvent } from 'react';
-import './TodoItem.css';
-import Checkbox from "../ui/Checkbox/Checkbox.js";
+import { useState, ChangeEvent, MouseEvent } from "react";
+import styles from "./TodoItem.module.scss";
+import Checkbox from "../../ui/Checkbox/Checkbox.js";
 import { updateTodo, deleteTodo } from "../../api/api";
-import { Todo } from "../../types/types"
+import { Todo } from "../../types/types";
+
+const MIN_TEXT_LENGTH = 2;
+const MAX_TEXT_LENGTH = 64;
 
 interface TodoItemProps {
     todo: Todo;
     onUpdate: () => void;
 }
 
-function TodoItem ({ todo, onUpdate }: TodoItemProps) {
+function TodoItem({ todo, onUpdate }: TodoItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editingText, setEditingText] = useState<string>(todo.title);
 
-    const saveEditing = async () => {
-        if (!editingText.trim()) {
+    const handleToggle = async () => {
+        try {
+            await updateTodo(todo.id, { title: todo.title, isDone: !todo.isDone });
+            onUpdate();
+        } catch (error) {
+            console.error("Error toggling todo:", error);
+        }
+    };
+
+    const handleTitleChange = (e: ChangeEvent<HTMLInputElement>) => {
+        setEditingText(e.target.value);
+    };
+
+    const handleSaveClick = async () => {
+        const trimmedText = editingText.trim();
+
+        if (!trimmedText) {
             alert("The todo's text can't be empty");
             return;
         }
 
-        if (editingText.length < 2 || editingText.length > 64) {
+        if (trimmedText.length < MIN_TEXT_LENGTH || trimmedText.length > MAX_TEXT_LENGTH) {
             alert("The message must be between 2 and 64 characters long");
             return;
         }
 
         try {
-            await updateTodo(todo.id, editingText, todo.isDone);
+            await updateTodo(todo.id, { title: trimmedText, isDone: todo.isDone });
             setIsEditing(false);
             onUpdate();
         } catch (error) {
@@ -33,16 +51,13 @@ function TodoItem ({ todo, onUpdate }: TodoItemProps) {
         }
     };
 
-    const toggleTodo = async () => {
-        try {
-            await updateTodo(todo.id, todo.title, !todo.isDone);
-            onUpdate();
-        } catch (error) {
-            console.error("Error toggling todo:", error);
-        }
+    const handleCancelClick = () => {
+        setIsEditing(false);
+        setEditingText(todo.title);
     };
 
-    const removeTodo = async () => {
+    const handleDeleteClick = async (e: MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation();
         try {
             await deleteTodo(todo.id);
             onUpdate();
@@ -51,63 +66,48 @@ function TodoItem ({ todo, onUpdate }: TodoItemProps) {
         }
     };
 
-    return (
-        <li className={todo.isDone ? "todo done" : "todo"}>
-            <div className="todo-left">
-            <Checkbox checked={todo.isDone} onChange={toggleTodo} />
+    const handleEditClick = () => {
+        setIsEditing(true);
+    };
 
-            {isEditing ? (
-                <input
-                    className="edit-input"
-                    type="text"
-                    value={editingText}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setEditingText(e.target.value)}
-                />
-            ) : (
-                <span className="text-done">{todo.title}</span>
-            )}
+    return (
+        <li className={`${styles.todo} ${todo.isDone ? styles.done : ""}`}>
+            <div className={styles['todo-left']}>
+                <Checkbox checked={todo.isDone} onChange={handleToggle}/>
+                {isEditing ? (
+                    <input
+                        className={styles['edit-input']}
+                        type="text"
+                        value={editingText}
+                        onChange={handleTitleChange}
+                    />
+                ) : (
+                    <span className={styles['text-done']}>{todo.title}</span>
+                )}
             </div>
 
-            <div className="todo-controls">
-            {isEditing ? (
-                <>
-                    <img
-                        className="save-btn-img"
-                        src="./img/svg/floppy-disk.svg"
-                        alt="save"
-                        onClick={saveEditing}
-                    />
-                    <img
-                        className="close-btn-img"
-                        src="./img/svg/cancel.svg"
-                        alt="close"
-                        onClick={() => {
-                            setIsEditing(false);
-                            setEditingText(todo.title);
-                        }}
-                    />
-
-                </>
-            ) : (
-                <img
-                    className="edit"
-                    src="./img/svg/pen.svg"
-                    alt="edit"
-                    onClick={() => setIsEditing(true)}
-                />
-            )}
-
-            <img
-                className="delete"
-                src="./img/svg/trash.svg"
-                alt="delete"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    removeTodo();
-                }}
-            />
+            <div className={styles['todo-controls']}>
+                {isEditing ? (
+                    <>
+                        <button className={`${styles['icon-button']} ${styles['save-btn']}`} onClick={handleSaveClick}>
+                            <img src="./img/svg/floppy-disk.svg" alt=""/>
+                        </button>
+                        <button className={`${styles['icon-button']} ${styles['cancel-btn']}`}
+                                onClick={handleCancelClick}>
+                            <img src="./img/svg/cancel.svg" alt=""/>
+                        </button>
+                    </>
+                ) : (
+                    <button className={`${styles['icon-button']} ${styles['edit-btn']}`} onClick={handleEditClick}>
+                        <img src="./img/svg/pen.svg" alt=""/>
+                    </button>
+                )}
+                <button className={`${styles['icon-button']} ${styles['delete-btn']}`} onClick={handleDeleteClick}>
+                    <img src="./img/svg/trash.svg" alt=""/>
+                </button>
             </div>
         </li>
-    )}
+    );
+}
 
 export default TodoItem;

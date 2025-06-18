@@ -1,4 +1,4 @@
-import './TodoList.css';
+import styles from './TodoList.module.scss';
 import TodoItem from "../TodoItem/TodoItem";
 import { Todo } from "../../types/types";
 
@@ -9,9 +9,9 @@ interface TodoListProps {
 
 function TodoList({ todos, onUpdate }: TodoListProps) {
     return (
-        <ul className="todos">
+        <ul className={styles.todos}>
             {todos.map(todo => (
-                <TodoItem key={todo.id} todo={todo} onUpdate={onUpdate} />
+                <TodoItem key={todo.id} todo={todo} onUpdate={onUpdate}/>
             ))}
         </ul>
     );

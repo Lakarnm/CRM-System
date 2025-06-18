@@ -1,46 +1,43 @@
-import { Todo, TodoInfo } from "../types/types.js";
+import { Todo, TodoInfo, MetaResponse, FilterStatus, TodoRequest } from "../types/types.js";
 
 const API_URL = "https://easydev.club/api/v1/todos";
 
-async function fetchTodos(filter: string = "all"): Promise<{ todos: Todo[]; info: TodoInfo }> {
+async function fetchTodos(filter: FilterStatus = "all"): Promise<MetaResponse<Todo, TodoInfo>> {
     const response = await fetch(`${API_URL}?filter=${filter}`);
-    if (!response.ok) {
-        throw new Error("Failed to fetch todos");
-    }
-    const data = await response.json();
-    return { todos: data.data, info: data.info };
+    if (!response.ok) throw new Error("Failed to fetch todos");
+    return await response.json() as MetaResponse<Todo, TodoInfo>;
 }
 
-async function addTodo(title: string): Promise<void> {
+async function addTodo(todo: TodoRequest): Promise<Todo> {
     const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, isDone: false }),
+        body: JSON.stringify(todo),
     });
-    if (!response.ok) {
-        throw new Error("Failed to add todo");
-    }
+    if (!response.ok) throw new Error("Failed to add todo");
+    return await response.json() as Todo;
 }
 
-async function updateTodo(id: number, title: string, isDone: boolean): Promise<void> {
+async function updateTodo(id: number, update: TodoRequest): Promise<Todo> {
     const response = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, isDone }),
+        body: JSON.stringify(update),
     });
-    if (!response.ok) {
-        throw new Error("Failed to update todo");
-    }
+    if (!response.ok) throw new Error("Failed to update todo");
+    return await response.json() as Todo;
 }
 
 async function deleteTodo(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-    if (response.status === 404) {
-        throw new Error("Todo not found");
-    }
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete todo");
 }
 
-export { addTodo, updateTodo, deleteTodo, fetchTodos };
+export { fetchTodos, addTodo, updateTodo, deleteTodo };
+
+
 
 
 
