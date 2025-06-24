@@ -1,25 +1,26 @@
 .form {
     display: flex;
     margin: 10px;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .todo-input {
-    width: 85%;
+    flex: 1;
     outline: none;
     border: 1px solid;
     padding: 10px;
     font-size: 20px;
     border-radius: 5px;
     box-shadow: 1px 1px #535354;
+    min-width: 200px;
 }
 
 .add {
-    width: 15%;
     border: 1px solid black;
     padding: 10px;
     font-size: 20px;
     border-radius: 5px;
-    margin-left: 10px;
     color: white;
     background-color: #1780de;
     box-shadow: 1px 1px #535354;

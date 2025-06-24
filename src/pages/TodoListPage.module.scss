@@ -1,0 +1,23 @@
+.wrapper {
+    font-family: arial, sans-serif;
+    background-color: #e3e3e3;
+}
+
+.container {
+    max-width: 800px;
+    margin: 100px auto 0 auto;
+}
+
+.title {
+    text-align: center;
+    color: #1780de;
+    margin-bottom: 20px;
+}
+
+.todos {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    padding: 10px;
+    margin-top: 10px;
+}

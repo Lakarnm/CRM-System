@@ -1,0 +1,77 @@
+.todo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+    width: 100%;
+    box-shadow: 1px 1px;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    background-color: white;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.todo-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.done .text-done {
+    text-decoration: line-through;
+    color: grey;
+}
+
+.edit-input {
+    flex: 1;
+    min-width: 200px;
+    outline: none;
+    padding: 2px;
+    border: 1px solid #007bff;
+    font-size: 18px;
+    border-radius: 5px;
+    color: #007bff;
+}
+
+.todo-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.icon-button img {
+    width: 18px;
+    height: 18px;
+}
+
+.icon-button {
+    background-color: transparent;
+    border: none;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.save-btn {
+    background-color: #4caf50;
+}
+
+.cancel-btn {
+    background-color: #f4ce36;
+}
+
+.edit-btn {
+    background-color: #2196f3;
+}
+
+.delete-btn {
+    background-color: #f44336;
+}
