@@ -1,37 +1,41 @@
-import styles from './Tabs.module.scss';
-import {FilterStatus, TodoInfo} from "../../types/types"
+import { Tabs } from "antd";
+import type { TabsProps as AntdTabsProps } from "antd";
+import { TodoInfo, FilterStatus } from "../../types/types";
 
-interface TabsProps {
-    filterStatus: FilterStatus;
-    setFilterStatus: (status: FilterStatus) => void;
-    info: TodoInfo;
+interface Props {
+    selectedTab: FilterStatus;
+    onSelectTab: (tab: FilterStatus) => void;
+    todoInfo: TodoInfo;
 }
 
-function Tabs({ filterStatus, setFilterStatus, info }: TabsProps) {
+const TodoTabs = ({ selectedTab, onSelectTab, todoInfo }: Props) => {
+    const items: AntdTabsProps["items"] = [
+        {
+            key: "all",
+            label: `Все (${todoInfo.all})`,
+        },
+        {
+            key: "inWork",
+            label: `В работе (${todoInfo.inWork})`,
+        },
+        {
+            key: "completed",
+            label: `Завершённые (${todoInfo.completed})`,
+        },
+    ];
+
     return (
-        <div className={styles.info}>
-            <button
-                className={`${styles.stats} ${filterStatus === "all" ? styles.active : ""}`}
-                onClick={() => setFilterStatus("all")}
-            >
-                Все: ({info.all})
-            </button>
-            <button
-                className={`${styles.stats} ${filterStatus === "inWork" ? styles.active : ""}`}
-                onClick={() => setFilterStatus("inWork")}
-            >
-                В работе: ({info.inWork})
-            </button>
-            <button
-                className={`${styles.stats} ${filterStatus === "completed" ? styles.active : ""}`}
-                onClick={() => setFilterStatus("completed")}
-            >
-                Сделано: ({info.completed})
-            </button>
-        </div>
+        <Tabs
+            activeKey={selectedTab}
+            onChange={(key) => onSelectTab(key as FilterStatus)}
+            items={items}
+            centered
+        />
     );
-}
+};
 
-export default Tabs;
+export default TodoTabs;
+
+
 
 

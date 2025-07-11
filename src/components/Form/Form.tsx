@@ -1,52 +1,48 @@
-import styles from './Form.module.scss';
-import { useState, FormEvent, ChangeEvent } from "react";
-import { addTodo } from "../../api/api";
+import { Form as AntForm, Input, Button } from "antd";
+import { useState } from "react";
+import { createTodo } from "../../api/api";
 
-let minTextLength: number = 2;
-let maxTextLength: number = 64;
-
-interface FormProps {
-    reloadTodos: () => void;
+interface Props {
+    onAdd: () => void;
 }
 
-function Form({ reloadTodos }: FormProps) {
-    const [value, setValue] = useState<string>('');
+const TodoForm = ({ onAdd }: Props) => {
+    const [form] = AntForm.useForm();
+    const [loading, setLoading] = useState(false);
 
-
-    const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault();
-
-        if (!value.trim()) {
-            alert("Fill out the form");
-            return;
-        }
-
-        if (value.length < minTextLength || value.length > maxTextLength) {
-            alert("The message must be between 2 and 64 characters long");
-            return;
-        }
-
+    const handleSubmit = async (values: { title: string }) => {
         try {
-            await addTodo({ title: value, isDone: false });
-            setValue("");
-            reloadTodos();
-        } catch (error) {
-            console.error("Error adding todo:", error);
+            setLoading(true);
+            await createTodo({ title: values.title.trim() });
+            form.resetFields();
+            onAdd();
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <form className={styles.form} onSubmit={handleSubmit}>
-            <input
-                type="text"
-                placeholder="Task To Be Done..."
-                className={styles['todo-input']}
-                value={value}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
-            />
-            <button className={styles.add} type="submit">Add</button>
-        </form>
+        <AntForm form={form} layout="inline" onFinish={handleSubmit}>
+            <AntForm.Item
+                name="title"
+                rules={[
+                    { required: true, message: "Введите задачу" },
+                    { min: 2, message: "Минимум 2 символа" },
+                    { max: 64, message: "Максимум 64 символа" },
+                ]}
+                style={{ flexGrow: 1 }}
+            >
+                <Input placeholder="Новая задача" allowClear />
+            </AntForm.Item>
+            <AntForm.Item>
+                <Button type="primary" htmlType="submit" loading={loading}>
+                    Создать
+                </Button>
+            </AntForm.Item>
+        </AntForm>
     );
-}
+};
 
-export default Form;
+export default TodoForm;
+
+
