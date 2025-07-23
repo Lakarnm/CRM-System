@@ -1,24 +1,27 @@
 import axios from "axios";
 import { Todo, MetaResponse, FilterStatus, TodoRequest, TodoInfo } from "../types/types";
 
-const API_URL = "https://easydev.club/api/v1/todos";
+const axiosInstance = axios.create({
+    baseURL: "https://easydev.club/api/v1",
+});
 
 export const fetchTodos = async (filter: FilterStatus): Promise<MetaResponse<Todo, TodoInfo>> => {
-    const url = `${API_URL}?filter=${filter}`;
-    const response = await axios.get<MetaResponse<Todo, TodoInfo>>(url);
+    const response = await axiosInstance.get<MetaResponse<Todo, TodoInfo>>("/todos", {
+        params: { filter },
+    });
     return response.data;
 };
 
 export const createTodo = async (todo: TodoRequest): Promise<Todo> => {
-    const response = await axios.post<Todo>(API_URL, todo);
+    const response = await axiosInstance.post<Todo>("/todos", todo);
     return response.data;
 };
 
 export const updateTodo = async (id: number, updated: TodoRequest): Promise<Todo> => {
-    const response = await axios.put<Todo>(`${API_URL}/${id}`, updated);
+    const response = await axiosInstance.put<Todo>(`/todos/${id}`, updated);
     return response.data;
 };
 
 export const deleteTodo = async (id: number): Promise<void> => {
-    await axios.delete(`${API_URL}/${id}`);
+    await axiosInstance.delete(`/todos/${id}`);
 };

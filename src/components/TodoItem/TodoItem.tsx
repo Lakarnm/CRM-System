@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Checkbox, Input, Button, Space, Form, message } from "antd";
 import { DeleteOutlined, EditOutlined, SaveOutlined } from "@ant-design/icons";
 import { Todo } from "../../types/types";
@@ -10,7 +10,7 @@ interface Props {
     setIsEditing: (isEditing: boolean) => void;
 }
 
-const TodoItem = ({ todo, onUpdate, setIsEditing }: Props) => {
+const TodoItem = memo(({ todo, onUpdate, setIsEditing }: Props) => {
     const [isEditing, setLocalEditing] = useState(false);
     const [form] = Form.useForm();
 
@@ -30,19 +30,15 @@ const TodoItem = ({ todo, onUpdate, setIsEditing }: Props) => {
         form.setFieldsValue({ title: todo.title });
     };
 
-    const handleSave = async () => {
-        try {
-            const values = await form.validateFields();
-            const trimmed = values.title.trim();
-            if (trimmed !== todo.title) {
-                await updateTodo(todo.id, { title: trimmed });
-                message.success("Задача обновлена");
-            }
-            setIsEditing(false);
-            setLocalEditing(false);
-            setIsEditing(false);
-            onUpdate();
-        } catch (error) {}
+    const handleFinish = async (values: { title: string }) => {
+        const trimmed = values.title.trim();
+        if (trimmed !== todo.title) {
+            await updateTodo(todo.id, { title: trimmed });
+            message.success("Задача обновлена");
+        }
+        setIsEditing(false);
+        setLocalEditing(false);
+        onUpdate();
     };
 
     return (
@@ -57,7 +53,12 @@ const TodoItem = ({ todo, onUpdate, setIsEditing }: Props) => {
             <Checkbox checked={todo.isDone} onChange={handleToggleDone} />
 
             {isEditing ? (
-                <Form form={form} initialValues={{ title: todo.title }} style={{ flex: 1, marginLeft: 8 }}>
+                <Form
+                    form={form}
+                    initialValues={{ title: todo.title }}
+                    onFinish={handleFinish}
+                    style={{ flex: 1, marginLeft: 8 }}
+                >
                     <Form.Item
                         name="title"
                         rules={[
@@ -67,10 +68,7 @@ const TodoItem = ({ todo, onUpdate, setIsEditing }: Props) => {
                         ]}
                         style={{ marginBottom: 0 }}
                     >
-                        <Input
-                            onPressEnter={handleSave}
-                            autoFocus
-                        />
+                        <Input onPressEnter={() => form.submit()} autoFocus />
                     </Form.Item>
                 </Form>
             ) : (
@@ -91,7 +89,7 @@ const TodoItem = ({ todo, onUpdate, setIsEditing }: Props) => {
                     <Button
                         type="primary"
                         icon={<SaveOutlined />}
-                        onClick={handleSave}
+                        onClick={() => form.submit()}
                     />
                 ) : (
                     <Button icon={<EditOutlined />} onClick={handleEdit} />
@@ -100,9 +98,10 @@ const TodoItem = ({ todo, onUpdate, setIsEditing }: Props) => {
             </Space>
         </div>
     );
-};
+});
 
 export default TodoItem;
+
 
 
 
