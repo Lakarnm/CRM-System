@@ -1,4 +1,4 @@
-import { Form as AntForm, Input, Button } from "antd";
+import { Form, Input, Button } from "antd";
 import { useState } from "react";
 import { createTodo } from "../../api/api";
 
@@ -7,8 +7,8 @@ interface Props {
 }
 
 const TodoForm = ({ onAdd }: Props) => {
-    const [form] = AntForm.useForm();
-    const [loading, setLoading] = useState(false);
+    const [form] = Form.useForm();
+    const [loading, setLoading] = useState<boolean>(false);
 
     const handleSubmit = async (values: { title: string }) => {
         try {
@@ -22,8 +22,8 @@ const TodoForm = ({ onAdd }: Props) => {
     };
 
     return (
-        <AntForm form={form} layout="inline" onFinish={handleSubmit}>
-            <AntForm.Item
+        <Form form={form} layout="inline" onFinish={handleSubmit}>
+            <Form.Item
                 name="title"
                 rules={[
                     { required: true, message: "Введите задачу" },
@@ -32,14 +32,18 @@ const TodoForm = ({ onAdd }: Props) => {
                 ]}
                 style={{ flexGrow: 1 }}
             >
-                <Input placeholder="Новая задача" allowClear />
-            </AntForm.Item>
-            <AntForm.Item>
+                <Input
+                    placeholder="Новая задача"
+                    allowClear
+                    onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+                />
+            </Form.Item>
+            <Form.Item>
                 <Button type="primary" htmlType="submit" loading={loading}>
                     Создать
                 </Button>
-            </AntForm.Item>
-        </AntForm>
+            </Form.Item>
+        </Form>
     );
 };
 

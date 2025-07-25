@@ -11,7 +11,7 @@ interface Props {
 }
 
 const TodoItem = memo(({ todo, onUpdate, setIsEditing }: Props) => {
-    const [isEditing, setLocalEditing] = useState(false);
+    const [isEditing, setLocalEditing] = useState<boolean>(false);
     const [form] = Form.useForm();
 
     const handleToggleDone = async () => {
@@ -68,7 +68,14 @@ const TodoItem = memo(({ todo, onUpdate, setIsEditing }: Props) => {
                         ]}
                         style={{ marginBottom: 0 }}
                     >
-                        <Input onPressEnter={() => form.submit()} autoFocus />
+                        <Input
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                }
+                            }}
+                        />
                     </Form.Item>
                 </Form>
             ) : (

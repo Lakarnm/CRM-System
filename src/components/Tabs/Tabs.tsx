@@ -1,5 +1,5 @@
 import { Tabs } from "antd";
-import type { TabsProps as AntdTabsProps } from "antd";
+import type { TabsProps } from "antd";
 import { TodoInfo, FilterStatus } from "../../types/types";
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
 }
 
 const TodoTabs = ({ selectedTab, onSelectTab, todoInfo }: Props) => {
-    const items: AntdTabsProps["items"] = [
+    const items: TabsProps["items"] = [
         {
             key: "all",
             label: `Все (${todoInfo.all})`,

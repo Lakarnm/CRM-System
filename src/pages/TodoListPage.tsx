@@ -16,7 +16,7 @@ const TodoListPage = () => {
         inWork: 0,
     });
     const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
-    const [isEditing, setIsEditing] = useState(false);
+    const [isEditing, setIsEditing] = useState<boolean>(false);
 
     const loadTodos = useCallback(
         async (status: FilterStatus) => {
