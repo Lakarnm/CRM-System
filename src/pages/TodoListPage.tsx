@@ -3,7 +3,7 @@ import { Typography, Space } from "antd";
 import { fetchTodos } from "../api/api";
 import { Todo, TodoInfo, FilterStatus } from "../types/types";
 import TodoTabs from "../components/Tabs/Tabs";
-import TodoForm from "../components/Form/Form";
+import TodoForm from "../components/Form/TodoForm.js";
 import TodoList from "../components/TodoList/TodoList";
 
 const { Title } = Typography;

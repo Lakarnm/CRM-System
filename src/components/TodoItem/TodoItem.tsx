@@ -15,9 +15,15 @@ const TodoItem = memo(({ todo, onUpdate, setIsEditing }: Props) => {
     const [form] = Form.useForm();
 
     const handleToggleDone = async () => {
-        await updateTodo(todo.id, { isDone: !todo.isDone });
-        onUpdate();
+        try {
+            await updateTodo(todo.id, { isDone: !todo.isDone });
+            onUpdate();
+        } catch (e) {
+            console.error(e);
+            message.error("Не удалось обновить задачу");
+        }
     };
+
 
     const handleDelete = async () => {
         await deleteTodo(todo.id);
@@ -96,7 +102,7 @@ const TodoItem = memo(({ todo, onUpdate, setIsEditing }: Props) => {
                     <Button
                         type="primary"
                         icon={<SaveOutlined />}
-                        onClick={() => form.submit()}
+                        htmlType="submit"
                     />
                 ) : (
                     <Button icon={<EditOutlined />} onClick={handleEdit} />

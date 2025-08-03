@@ -1,4 +1,4 @@
-import { Form, Input, Button } from "antd";
+import { Form, Input, Button, message} from "antd";
 import { useState } from "react";
 import { createTodo } from "../../api/api";
 
@@ -11,15 +11,19 @@ const TodoForm = ({ onAdd }: Props) => {
     const [loading, setLoading] = useState<boolean>(false);
 
     const handleSubmit = async (values: { title: string }) => {
+        setLoading(true);
         try {
-            setLoading(true);
             await createTodo({ title: values.title.trim() });
             form.resetFields();
-            onAdd();
+            await onAdd();
+        } catch (e) {
+            console.error(e);
+            message.error("Не удалось создать задачу");
         } finally {
             setLoading(false);
         }
     };
+
 
     return (
         <Form form={form} layout="inline" onFinish={handleSubmit}>
