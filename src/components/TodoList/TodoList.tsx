@@ -1,20 +1,23 @@
-import styles from './TodoList.module.scss';
 import TodoItem from "../TodoItem/TodoItem";
 import { Todo } from "../../types/types";
 
-interface TodoListProps {
+interface Props {
     todos: Todo[];
     onUpdate: () => void;
+    setIsEditing: (isEditing: boolean) => void;
 }
 
-function TodoList({ todos, onUpdate }: TodoListProps) {
+export default function TodoList({ todos, onUpdate, setIsEditing }: Props) {
     return (
-        <ul className={styles.todos}>
-            {todos.map(todo => (
-                <TodoItem key={todo.id} todo={todo} onUpdate={onUpdate}/>
+        <div>
+            {todos.map((todo) => (
+                <TodoItem
+                    key={todo.id}
+                    todo={todo}
+                    onUpdate={onUpdate}
+                    setIsEditing={setIsEditing}
+                />
             ))}
-        </ul>
+        </div>
     );
 }
-
-export default TodoList;
