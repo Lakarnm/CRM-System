@@ -1,113 +1,121 @@
-import { useState, ChangeEvent, MouseEvent } from "react";
-import styles from "./TodoItem.module.scss";
-import Checkbox from "../../ui/Checkbox/Checkbox.js";
-import { updateTodo, deleteTodo } from "../../api/api";
+import { useState, memo } from "react";
+import { Checkbox, Input, Button, Space, Form, message } from "antd";
+import { DeleteOutlined, EditOutlined, SaveOutlined } from "@ant-design/icons";
 import { Todo } from "../../types/types";
+import { deleteTodo, updateTodo } from "../../api/api";
 
-const MIN_TEXT_LENGTH = 2;
-const MAX_TEXT_LENGTH = 64;
-
-interface TodoItemProps {
+interface Props {
     todo: Todo;
     onUpdate: () => void;
+    setIsEditing: (isEditing: boolean) => void;
 }
 
-function TodoItem({ todo, onUpdate }: TodoItemProps) {
-    const [isEditing, setIsEditing] = useState(false);
-    const [editingText, setEditingText] = useState<string>(todo.title);
+const TodoItem = memo(({ todo, onUpdate, setIsEditing }: Props) => {
+    const [isEditing, setLocalEditing] = useState<boolean>(false);
+    const [form] = Form.useForm();
 
-    const handleToggle = async () => {
+    const handleToggleDone = async () => {
         try {
-            await updateTodo(todo.id, { title: todo.title, isDone: !todo.isDone });
+            await updateTodo(todo.id, { isDone: !todo.isDone });
             onUpdate();
-        } catch (error) {
-            console.error("Error toggling todo:", error);
+        } catch (e) {
+            console.error(e);
+            message.error("Не удалось обновить задачу");
         }
     };
 
-    const handleTitleChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setEditingText(e.target.value);
+
+    const handleDelete = async () => {
+        await deleteTodo(todo.id);
+        onUpdate();
     };
 
-    const handleSaveClick = async () => {
-        const trimmedText = editingText.trim();
-
-        if (!trimmedText) {
-            alert("The todo's text can't be empty");
-            return;
-        }
-
-        if (trimmedText.length < MIN_TEXT_LENGTH || trimmedText.length > MAX_TEXT_LENGTH) {
-            alert("The message must be between 2 and 64 characters long");
-            return;
-        }
-
-        try {
-            await updateTodo(todo.id, { title: trimmedText, isDone: todo.isDone });
-            setIsEditing(false);
-            onUpdate();
-        } catch (error) {
-            console.error("Error updating todo:", error);
-        }
-    };
-
-    const handleCancelClick = () => {
-        setIsEditing(false);
-        setEditingText(todo.title);
-    };
-
-    const handleDeleteClick = async (e: MouseEvent<HTMLButtonElement>) => {
-        e.stopPropagation();
-        try {
-            await deleteTodo(todo.id);
-            onUpdate();
-        } catch (error) {
-            console.error("Error deleting todo:", error);
-        }
-    };
-
-    const handleEditClick = () => {
+    const handleEdit = () => {
         setIsEditing(true);
+        setLocalEditing(true);
+        form.setFieldsValue({ title: todo.title });
+    };
+
+    const handleFinish = async (values: { title: string }) => {
+        const trimmed = values.title.trim();
+        if (trimmed !== todo.title) {
+            await updateTodo(todo.id, { title: trimmed });
+            message.success("Задача обновлена");
+        }
+        setIsEditing(false);
+        setLocalEditing(false);
+        onUpdate();
     };
 
     return (
-        <li className={`${styles.todo} ${todo.isDone ? styles.done : ""}`}>
-            <div className={styles['todo-left']}>
-                <Checkbox checked={todo.isDone} onChange={handleToggle}/>
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "8px 0",
+                borderBottom: "1px solid #eee",
+            }}
+        >
+            <Checkbox checked={todo.isDone} onChange={handleToggleDone} />
+
+            {isEditing ? (
+                <Form
+                    form={form}
+                    initialValues={{ title: todo.title }}
+                    onFinish={handleFinish}
+                    style={{ flex: 1, marginLeft: 8 }}
+                >
+                    <Form.Item
+                        name="title"
+                        rules={[
+                            { required: true, message: "Введите задачу" },
+                            { min: 2, message: "Минимум 2 символа" },
+                            { max: 64, message: "Максимум 64 символа" },
+                        ]}
+                        style={{ marginBottom: 0 }}
+                    >
+                        <Input
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                }
+                            }}
+                        />
+                    </Form.Item>
+                </Form>
+            ) : (
+                <span
+                    style={{
+                        marginLeft: 8,
+                        flex: 1,
+                        textDecoration: todo.isDone ? "line-through" : "none",
+                        color: todo.isDone ? "#999" : "inherit",
+                    }}
+                >
+                    {todo.title}
+                </span>
+            )}
+
+            <Space>
                 {isEditing ? (
-                    <input
-                        className={styles['edit-input']}
-                        type="text"
-                        value={editingText}
-                        onChange={handleTitleChange}
+                    <Button
+                        type="primary"
+                        icon={<SaveOutlined />}
+                        htmlType="submit"
                     />
                 ) : (
-                    <span className={styles['text-done']}>{todo.title}</span>
+                    <Button icon={<EditOutlined />} onClick={handleEdit} />
                 )}
-            </div>
-
-            <div className={styles['todo-controls']}>
-                {isEditing ? (
-                    <>
-                        <button className={`${styles['icon-button']} ${styles['save-btn']}`} onClick={handleSaveClick}>
-                            <img src="./img/svg/floppy-disk.svg" alt=""/>
-                        </button>
-                        <button className={`${styles['icon-button']} ${styles['cancel-btn']}`}
-                                onClick={handleCancelClick}>
-                            <img src="./img/svg/cancel.svg" alt=""/>
-                        </button>
-                    </>
-                ) : (
-                    <button className={`${styles['icon-button']} ${styles['edit-btn']}`} onClick={handleEditClick}>
-                        <img src="./img/svg/pen.svg" alt=""/>
-                    </button>
-                )}
-                <button className={`${styles['icon-button']} ${styles['delete-btn']}`} onClick={handleDeleteClick}>
-                    <img src="./img/svg/trash.svg" alt=""/>
-                </button>
-            </div>
-        </li>
+                <Button danger icon={<DeleteOutlined />} onClick={handleDelete} />
+            </Space>
+        </div>
     );
-}
+});
 
 export default TodoItem;
+
+
+
+
+
