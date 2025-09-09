@@ -1,121 +1,116 @@
-import { useState, memo } from "react";
-import { Checkbox, Input, Button, Space, Form, message } from "antd";
-import { DeleteOutlined, EditOutlined, SaveOutlined } from "@ant-design/icons";
-import { Todo } from "../../types/types";
-import { deleteTodo, updateTodo } from "../../api/api";
+import { useState } from "react";
+import { Checkbox, Button, Input, Space, Popconfirm, message } from "antd";
+import { Todo, TodoRequest } from "../../types/types";
+import { updateTodo, deleteTodo } from "../../api/api";
 
-interface Props {
+type Props = {
     todo: Todo;
-    onUpdate: () => void;
-    setIsEditing: (isEditing: boolean) => void;
-}
+    onUpdate: () => Promise<void>;
+    setIsEditing: (v: boolean) => void;
+};
 
-const TodoItem = memo(({ todo, onUpdate, setIsEditing }: Props) => {
-    const [isEditing, setLocalEditing] = useState<boolean>(false);
-    const [form] = Form.useForm();
+export default function TodoItem({ todo, onUpdate, setIsEditing }: Props) {
+    const [title, setTitle] = useState(todo.title);
+    const [saving, setSaving] = useState(false);
+    const [editing, setEditing] = useState(false);
 
-    const handleToggleDone = async () => {
+    const toggleDone = async () => {
         try {
-            await updateTodo(todo.id, { isDone: !todo.isDone });
-            onUpdate();
+            setSaving(true);
+            const patch: TodoRequest = { isDone: !todo.isDone };
+            await updateTodo(todo.id, patch);
+            await onUpdate();
         } catch (e) {
             console.error(e);
-            message.error("Не удалось обновить задачу");
+            message.error("Не удалось изменить статус задачи");
+        } finally {
+            setSaving(false);
         }
     };
-
 
     const handleDelete = async () => {
-        await deleteTodo(todo.id);
-        onUpdate();
-    };
-
-    const handleEdit = () => {
-        setIsEditing(true);
-        setLocalEditing(true);
-        form.setFieldsValue({ title: todo.title });
-    };
-
-    const handleFinish = async (values: { title: string }) => {
-        const trimmed = values.title.trim();
-        if (trimmed !== todo.title) {
-            await updateTodo(todo.id, { title: trimmed });
-            message.success("Задача обновлена");
+        try {
+            setSaving(true);
+            await deleteTodo(todo.id);
+            await onUpdate();
+            message.success("Задача удалена");
+        } catch (e) {
+            console.error(e);
+            message.error("Не удалось удалить задачу");
+        } finally {
+            setSaving(false);
         }
+    };
+
+    const startEdit = () => {
+        setEditing(true);
+        setIsEditing(true);
+    };
+
+    const cancelEdit = () => {
+        setEditing(false);
         setIsEditing(false);
-        setLocalEditing(false);
-        onUpdate();
+        setTitle(todo.title);
+    };
+
+    const saveEdit = async () => {
+        const t = title.trim();
+        if (!t) return message.warning("Введите название");
+        try {
+            setSaving(true);
+            const patch: TodoRequest = { title: t };
+            await updateTodo(todo.id, patch);
+            setEditing(false);
+            setIsEditing(false);
+            await onUpdate();
+            message.success("Изменения сохранены");
+        } catch (e) {
+            console.error(e);
+            message.error("Не удалось сохранить изменения");
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
-        <div
-            style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "8px 0",
-                borderBottom: "1px solid #eee",
-            }}
-        >
-            <Checkbox checked={todo.isDone} onChange={handleToggleDone} />
-
-            {isEditing ? (
-                <Form
-                    form={form}
-                    initialValues={{ title: todo.title }}
-                    onFinish={handleFinish}
-                    style={{ flex: 1, marginLeft: 8 }}
-                >
-                    <Form.Item
-                        name="title"
-                        rules={[
-                            { required: true, message: "Введите задачу" },
-                            { min: 2, message: "Минимум 2 символа" },
-                            { max: 64, message: "Максимум 64 символа" },
-                        ]}
-                        style={{ marginBottom: 0 }}
-                    >
-                        <Input
-                            autoFocus
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault();
-                                }
-                            }}
-                        />
-                    </Form.Item>
-                </Form>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
+            <Checkbox checked={todo.isDone} onChange={toggleDone} disabled={saving} />
+            {editing ? (
+                <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    onPressEnter={saveEdit}
+                    style={{ maxWidth: 420 }}
+                />
             ) : (
-                <span
-                    style={{
-                        marginLeft: 8,
-                        flex: 1,
-                        textDecoration: todo.isDone ? "line-through" : "none",
-                        color: todo.isDone ? "#999" : "inherit",
-                    }}
-                >
-                    {todo.title}
-                </span>
+                <span style={{ textDecoration: todo.isDone ? "line-through" : "none" }}>
+          {todo.title}
+        </span>
             )}
 
-            <Space>
-                {isEditing ? (
-                    <Button
-                        type="primary"
-                        icon={<SaveOutlined />}
-                        htmlType="submit"
-                    />
+            <Space style={{ marginLeft: "auto" }}>
+                {editing ? (
+                    <>
+                        <Button size="small" onClick={cancelEdit} disabled={saving}>
+                            Отменить
+                        </Button>
+                        <Button size="small" type="primary" onClick={saveEdit} loading={saving}>
+                            Сохранить
+                        </Button>
+                    </>
                 ) : (
-                    <Button icon={<EditOutlined />} onClick={handleEdit} />
+                    <>
+                        <Button size="small" onClick={startEdit} disabled={saving}>
+                            Редактировать
+                        </Button>
+                        <Popconfirm title="Удалить задачу?" onConfirm={handleDelete} okText="Да" cancelText="Нет">
+                            <Button size="small" danger loading={saving}>
+                                Удалить
+                            </Button>
+                        </Popconfirm>
+                    </>
                 )}
-                <Button danger icon={<DeleteOutlined />} onClick={handleDelete} />
             </Space>
         </div>
     );
-});
-
-export default TodoItem;
-
-
-
-
-
+}

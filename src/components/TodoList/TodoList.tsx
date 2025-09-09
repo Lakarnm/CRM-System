@@ -1,13 +1,14 @@
+import { memo } from "react";
 import TodoItem from "../TodoItem/TodoItem";
 import { Todo } from "../../types/types";
 
 interface Props {
     todos: Todo[];
-    onUpdate: () => void;
+    onUpdate: () => Promise<void>;
     setIsEditing: (isEditing: boolean) => void;
 }
 
-export default function TodoList({ todos, onUpdate, setIsEditing }: Props) {
+function TodoList({ todos, onUpdate, setIsEditing }: Props) {
     return (
         <div>
             {todos.map((todo) => (
@@ -21,3 +22,5 @@ export default function TodoList({ todos, onUpdate, setIsEditing }: Props) {
         </div>
     );
 }
+
+export default memo(TodoList);

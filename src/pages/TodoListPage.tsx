@@ -1,70 +1,145 @@
-import { useCallback, useEffect, useState } from "react";
-import { Typography, Space } from "antd";
-import { fetchTodos } from "../api/api";
-import { Todo, TodoInfo, FilterStatus } from "../types/types";
-import TodoTabs from "../components/Tabs/Tabs";
-import TodoForm from "../components/Form/TodoForm.js";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Button, Form, Input, App as AntdApp } from "antd";
 import TodoList from "../components/TodoList/TodoList";
+import TodoTabs from "../components/Tabs/Tabs";
+import { fetchTodos, createTodo } from "../api/api";
+import { Todo, FilterStatus, TodoInfo, MetaResponse, TodoRequest } from "../types/types";
 
-const { Title } = Typography;
+export default function TodoListPage() {
+    const { message } = AntdApp.useApp();
 
-const TodoListPage = () => {
     const [todos, setTodos] = useState<Todo[]>([]);
     const [todoInfo, setTodoInfo] = useState<TodoInfo>({
         all: 0,
-        completed: 0,
         inWork: 0,
+        completed: 0,
     });
-    const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+    const [filter, setFilter] = useState<FilterStatus>("all");
+    const [loading, setLoading] = useState<boolean>(false);
     const [isEditing, setIsEditing] = useState<boolean>(false);
 
-    const loadTodos = useCallback(
-        async (status: FilterStatus) => {
-            try {
-                const response = await fetchTodos(status);
-                setTodos(response.data);
-                if (response.info) {
-                    setTodoInfo(response.info);
+    const [form] = Form.useForm();
+
+    const intervalRef = useRef<number | null>(null);
+    const lastRequestIdRef = useRef(0);
+
+    const loadTodos = useCallback(async () => {
+        const requestId = ++lastRequestIdRef.current;
+        try {
+            setLoading(true);
+            const res: MetaResponse<Todo, TodoInfo> = await fetchTodos(filter);
+
+            if (requestId !== lastRequestIdRef.current) return;
+
+            const serverData = res.data ?? [];
+
+            const clientFiltered =
+                filter === "all"
+                    ? serverData
+                    : serverData.filter((t) =>
+                        filter === "completed" ? t.isDone : !t.isDone
+                    );
+
+            setTodos(clientFiltered);
+
+            setTodoInfo(
+                res.info ?? {
+                    all: serverData.length,
+                    inWork: serverData.filter((t) => !t.isDone).length,
+                    completed: serverData.filter((t) => t.isDone).length,
                 }
-            } catch (error) {
-                console.error("Ошибка при загрузке задач:", error);
-            }
-        },
-        []
-    );
-
-    useEffect(() => {
-        if (!isEditing) {
-            loadTodos(filterStatus);
+            );
+        } catch (e) {
+            console.error(e);
+            message.error("Не удалось загрузить задачи");
+        } finally {
+            setLoading(false);
         }
-    }, [filterStatus, loadTodos, isEditing]);
+    }, [filter, message]);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            if (!isEditing) {
-                loadTodos(filterStatus);
+        void loadTodos();
+
+        if (intervalRef.current) {
+            window.clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+        if (!isEditing) {
+            intervalRef.current = window.setInterval(() => {
+                void loadTodos();
+            }, 5000);
+        }
+        return () => {
+            if (intervalRef.current) {
+                window.clearInterval(intervalRef.current);
+                intervalRef.current = null;
             }
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [filterStatus, loadTodos, isEditing]);
+        };
+    }, [loadTodos, isEditing]);
+
+    const handleAddTodo = async (values: { title: string }) => {
+        const payload: TodoRequest = { title: values.title.trim() };
+        if (!payload.title) {
+            message.warning("Введите задачу");
+            return;
+        }
+        try {
+            await createTodo(payload);
+            message.success("Задача создана");
+            form.resetFields();
+            await loadTodos();
+        } catch (e) {
+            console.error(e);
+            message.error("Не удалось создать задачу");
+        }
+    };
+
+    const handleSelectTab = (key: string) => {
+        setFilter(key as FilterStatus);
+    };
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }}>
-            <Title level={2} style={{ textAlign: "center" }}>Список задач</Title>
-            <TodoForm onAdd={() => loadTodos(filterStatus)} />
-            <TodoTabs
-                selectedTab={filterStatus}
-                onSelectTab={(tab) => setFilterStatus(tab)}
-                todoInfo={todoInfo}
-            />
-            <TodoList
-                todos={todos}
-                onUpdate={() => loadTodos(filterStatus)}
-                setIsEditing={setIsEditing}
-            />
-        </Space>
+        <div className="page">
+            <div className="content-card">
+                <h1 className="page-title">Список задач</h1>
+
+                <Form
+                    form={form}
+                    onFinish={handleAddTodo}
+                    layout="inline"
+                    className="toolbar-form"
+                >
+                    <Form.Item
+                        name="title"
+                        className="toolbar-form__input"
+                        rules={[
+                            { required: true, message: "Введите задачу" },
+                            { min: 2, message: "Минимум 2 символа" },
+                            { max: 64, message: "Максимум 64 символа" },
+                        ]}
+                    >
+                        <Input size="large" placeholder="Новая задача" />
+                    </Form.Item>
+
+                    <Form.Item className="toolbar-form__submit">
+                        <Button type="primary" htmlType="submit" size="large" loading={loading}>
+                            Добавить
+                        </Button>
+                    </Form.Item>
+                </Form>
+
+                <TodoTabs
+                    selectedTab={filter}
+                    onSelectTab={handleSelectTab}
+                    todoInfo={todoInfo}
+                />
+
+                <TodoList
+                    todos={todos}
+                    onUpdate={loadTodos}
+                    setIsEditing={setIsEditing}
+                />
+            </div>
+        </div>
     );
-};
-
-export default TodoListPage;
-
+}

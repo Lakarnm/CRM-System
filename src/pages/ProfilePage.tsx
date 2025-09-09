@@ -1,16 +1,29 @@
-import { Typography } from "antd";
+import { useEffect, useRef } from "react";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { fetchProfileThunk } from "../features/auth/authSlice";
 
-const { Title } = Typography;
+export default function ProfilePage() {
+    const dispatch = useAppDispatch();
+    const loadedRef = useRef(false);
+    const user = useAppSelector((s) => s.auth.profile);
+    const isAuth = useAppSelector((s) => !!(s.auth.profile || s.auth.accessToken));
 
-const ProfilePage = () => {
+    useEffect(() => {
+        if (!loadedRef.current && isAuth && !user) {
+            loadedRef.current = true;
+            dispatch(fetchProfileThunk());
+        }
+    }, [dispatch, isAuth, user]);
+
+    if (!user) return <div>Загрузка...</div>;
+
     return (
-        <div style={{ padding: 24 }}>
-            <Title level={2} style={{ textAlign: "center" }}>
-                Профиль
-            </Title>
-            <p>Привет!</p>
+        <div style={{padding: 24}}>
+            <h2>Профиль</h2>
+            <div>Email: {user.email}</div>
+            <div>ID: {user.id}</div>
+            <div>Phone: {user.phoneNumber}</div>
+            {user.username && <div>Имя: {user.username}</div>}
         </div>
     );
-};
-
-export default ProfilePage;
+}

@@ -1,58 +1,50 @@
-// import "./App.css";
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
-import { Layout, Menu } from "antd";
-import { UnorderedListOutlined, UserOutlined } from "@ant-design/icons";
+import { useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAppDispatch, useAppSelector } from "./store/hooks";
+import { initAuth } from "./features/auth/authSlice";
+
+import ProtectedRoute from "./components/ProtectedRoute";
+import AppLayout from "./layouts/AppLayout";
+import AuthLayout from "./layouts/AuthLayout";
+
 import TodoListPage from "./pages/TodoListPage";
 import ProfilePage from "./pages/ProfilePage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 
-const { Header, Content, Sider } = Layout;
+export default function App() {
+    const dispatch = useAppDispatch();
+    const isAuthorization = useAppSelector((s) => s.auth.isAuthorization);
 
-const AppLayout = () => {
-    const location = useLocation();
-
-    const menuItems = [
-        {
-            key: "/",
-            icon: <UnorderedListOutlined />,
-            label: <Link to="/">Список задач</Link>,
-        },
-        {
-            key: "/profile",
-            icon: <UserOutlined />,
-            label: <Link to="/profile">Профиль</Link>,
-        },
-    ];
+    useEffect(() => {
+        dispatch(initAuth());
+    }, [dispatch]);
 
     return (
-        <Layout style={{ minHeight: "100vh" }}>
-            <Sider>
-                <Menu
-                    theme="dark"
-                    mode="inline"
-                    selectedKeys={[location.pathname]}
-                    items={menuItems}
+        <Routes>
+            {/* public */}
+            <Route element={<AuthLayout />}>
+                <Route
+                    path="/login"
+                    element={isAuthorization ? <Navigate to="/" replace /> : <LoginPage />}
                 />
-            </Sider>
-            <Layout>
-                <Header style={{ background: "#fff", padding: 0 }} />
-                <Content style={{ margin: "16px" }}>
-                    <Routes>
-                        <Route path="/" element={<TodoListPage />} />
-                        <Route path="/profile" element={<ProfilePage />} />
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </Content>
-            </Layout>
-        </Layout>
+                <Route
+                    path="/register"
+                    element={isAuthorization ? <Navigate to="/" replace /> : <RegisterPage />}
+                />
+                <Route path="/signup" element={<Navigate to="/register" replace />} />
+            </Route>
+
+            {/* Private */}
+            <Route element={<ProtectedRoute />}>
+                <Route element={<AppLayout />}>
+                    <Route index element={<TodoListPage />} />
+                    <Route path="profile" element={<ProfilePage />} />
+                </Route>
+            </Route>
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
     );
-};
-
-const App = () => (
-    <Router>
-        <AppLayout />
-    </Router>
-);
-
-export default App;
-
-
+}
