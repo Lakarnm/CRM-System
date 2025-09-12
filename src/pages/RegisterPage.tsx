@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Card, Form, Input, Typography, message } from "antd";
+import { Button, Card, Form, Input, Typography, App as AntdApp } from "antd";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { register } from "../features/auth/authSlice";
 import { useNavigate, Link } from "react-router-dom";
@@ -10,6 +10,7 @@ const { Title } = Typography;
 export default function RegisterPage() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const { message } = AntdApp.useApp();
     const { loading } = useAppSelector((s) => s.auth);
 
     const onFinish = async (v: {
@@ -18,34 +19,45 @@ export default function RegisterPage() {
         password: string;
         confirmPassword: string;
         email: string;
-        phoneNumber: string;
+        phoneNumber?: string;
     }) => {
         if (v.password !== v.confirmPassword) {
             message.error("Пароли не совпадают");
             return;
         }
 
+        const phone = (v.phoneNumber ?? "").trim();
+
         const payload: UserRegistration = {
             username: v.username.trim(),
             login: v.login.trim(),
             password: v.password,
             email: v.email.trim(),
-            phoneNumber: v.phoneNumber.trim(),
+            ...(phone ? { phoneNumber: phone } : {}),
         };
 
         try {
             await dispatch(register(payload)).unwrap();
-            message.success("Регистрация прошла успешно. Войдите в систему.");
-            navigate("/login");
+            message.success({
+                content: (
+                    <div>
+                        Регистрация прошла успешно.{" "}
+                        <a onClick={() => navigate("/login")}>Перейти к авторизации</a>
+                    </div>
+                ),
+                duration: 5,
+            });
         } catch (e: any) {
-            message.error(typeof e === "string" ? e : (e?.message || "Ошибка регистрации"));
+            message.error(typeof e === "string" ? e : e?.message || "Ошибка регистрации");
         }
     };
 
     return (
         <div style={{ display: "flex", justifyContent: "center", padding: "48px" }}>
             <Card style={{ width: 420 }}>
-                <Title level={3} style={{ marginBottom: 16 }}>Регистрация</Title>
+                <Title level={3} style={{ marginBottom: 16 }}>
+                    Регистрация
+                </Title>
 
                 <Form layout="vertical" onFinish={onFinish}>
                     <Form.Item
@@ -87,11 +99,19 @@ export default function RegisterPage() {
                         name="phoneNumber"
                         label="Телефон"
                         rules={[
-                            { required: true, message: "Введите телефон" },
-                            { pattern: /^\+?\d{10,15}$/, message: "Некорректный номер (пример: +79991234567)" },
+                            {
+                                validator: (_, value?: string) => {
+                                    const val = (value ?? "").trim();
+                                    if (!val) return Promise.resolve();
+                                    const ok = /^\+?\d{10,15}$/.test(val.replace(/\s+/g, ""));
+                                    return ok
+                                        ? Promise.resolve()
+                                        : Promise.reject(new Error("Некорректный номер (пример: +79991234567)"));
+                                },
+                            },
                         ]}
                     >
-                        <Input placeholder="+79991234567" />
+                        <Input placeholder="+79991234567" allowClear />
                     </Form.Item>
 
                     <Form.Item

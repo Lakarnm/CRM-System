@@ -1,29 +1,46 @@
 import { useEffect, useRef } from "react";
+import { Card, Descriptions, Typography, App as AntdApp } from "antd";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { fetchProfileThunk } from "../features/auth/authSlice";
 
+const { Title } = Typography;
+
 export default function ProfilePage() {
     const dispatch = useAppDispatch();
+    const { message } = AntdApp.useApp();
     const loadedRef = useRef(false);
-    const user = useAppSelector((s) => s.auth.profile);
-    const isAuth = useAppSelector((s) => !!(s.auth.profile || s.auth.accessToken));
+    const profile = useAppSelector((s) => s.auth.profile);
+    const isAuthorization = useAppSelector((s) => s.auth.isAuthorization);
 
     useEffect(() => {
-        if (!loadedRef.current && isAuth && !user) {
+        if (!loadedRef.current && isAuthorization && !profile) {
             loadedRef.current = true;
-            dispatch(fetchProfileThunk());
+            dispatch(fetchProfileThunk()).catch(() => {
+                message.error("Не удалось загрузить профиль");
+            });
         }
-    }, [dispatch, isAuth, user]);
+    }, [dispatch, isAuthorization, profile, message]);
 
-    if (!user) return <div>Загрузка...</div>;
+    if (!profile) {
+        return (
+            <div className="page">
+                <Card className="content-card">Загрузка…</Card>
+            </div>
+        );
+    }
 
     return (
-        <div style={{padding: 24}}>
-            <h2>Профиль</h2>
-            <div>Email: {user.email}</div>
-            <div>ID: {user.id}</div>
-            <div>Phone: {user.phoneNumber}</div>
-            {user.username && <div>Имя: {user.username}</div>}
+        <div className="page">
+            <Card className="content-card">
+                <Title level={3} style={{ marginBottom: 16 }}>
+                    Профиль
+                </Title>
+                <Descriptions column={1} bordered>
+                    <Descriptions.Item label="Логин">{profile.username || "—"}</Descriptions.Item>
+                    <Descriptions.Item label="Почта">{profile.email || "—"}</Descriptions.Item>
+                    <Descriptions.Item label="Телефон">{profile.phoneNumber || "—"}</Descriptions.Item>
+                </Descriptions>
+            </Card>
         </div>
     );
 }

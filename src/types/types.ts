@@ -2,7 +2,7 @@
 export interface Todo {
     id: number;
     title: string;
-    created: string; // ISO date string
+    created: string;
     isDone: boolean;
 }
 
@@ -27,13 +27,14 @@ export interface MetaResponse<T, N = undefined> {
 
 export type FilterStatus = "all" | "completed" | "inWork";
 
+
 // ---------- AUTH ----------
 export interface UserRegistration {
     login: string;
     username: string;
     password: string;
     email: string;
-    phoneNumber: string;
+    phoneNumber?: string;
 }
 
 export interface AuthData {
@@ -70,4 +71,13 @@ export interface ProfileRequest {
 
 export interface PasswordRequest {
     password: string;
+}
+
+// ---------- Redux Auth Slice ----------
+export interface AuthState {
+    user: Profile | null;
+    accessToken: string | null;
+    refreshToken: string | null;
+    loading: boolean;
+    error: string | null;
 }
