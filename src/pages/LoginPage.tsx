@@ -1,56 +1,70 @@
-import { Form, Input, Button, App as AntdApp } from "antd";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { Card, Form, Input, Button, Typography, App as AntdApp } from "antd";
+import { Link, useNavigate } from "react-router-dom";
+import { useAppDispatch } from "../store/hooks";
 import { login } from "../features/auth/authSlice";
-import { Link, Navigate } from "react-router-dom";
+
+const { Title, Text } = Typography;
 
 export default function LoginPage() {
-    const { message } = AntdApp.useApp();
     const dispatch = useAppDispatch();
-    const isAuth = useAppSelector(s => s.auth.isAuth);
-    const loading = useAppSelector(s => s.auth.loading);
+    const navigate = useNavigate();
+    const { message } = AntdApp.useApp();
 
-    const onFinish = async (values: { login: string; password: string }) => {
-        const res = await dispatch(login(values));
-        if ((res as any).meta.requestStatus === "fulfilled") {
+    const onFinish = async (v: { login: string; password: string }) => {
+        try {
+            await dispatch(login({ login: v.login.trim(), password: v.password })).unwrap();
             message.success("Добро пожаловать!");
+            navigate("/");
+        } catch (e: any) {
+            message.error(typeof e === "string" ? e : "Неверные логин или пароль");
         }
     };
-
-    if (isAuth) return <Navigate to="/" replace />;
 
     return (
         <div className="auth-wrapper">
             <div className="auth-card">
                 <div className="auth-left">
-                    <img className="auth-image" src="/img/png/authPicture.png" alt="auth" />
+                    <img className="auth-image" src="/img/png/authPicture.png" alt="Auth" />
                     <div className="auth-caption">
-                        <h3>Turn your ideas into reality.</h3>
-                        <div>Start for free and get attractive offers from the community</div>
+                        <Text type="secondary">Войдите, чтобы управлять задачами</Text>
                     </div>
                 </div>
 
                 <div className="auth-right">
-                    <div className="auth-form">
-                        <h2 style={{ marginBottom: 16 }}>Login to your Account</h2>
-                        <Form layout="vertical" onFinish={onFinish}>
-                            <Form.Item label="Login" name="login" rules={[{ required: true, message: "Введите логин" }]}>
-                                <Input placeholder="your login" />
-                            </Form.Item>
-                            <Form.Item label="Password" name="password" rules={[{ required: true, message: "Введите пароль" }]}>
-                                <Input.Password placeholder="••••••••" />
-                            </Form.Item>
-                            <Form.Item>
-                                <Button type="primary" htmlType="submit" loading={loading} block>
-                                    Login
-                                </Button>
-                            </Form.Item>
-                        </Form>
+                    <Card className="auth-form">
+                        <Title level={3} style={{ marginBottom: 16 }}>
+                            Авторизация
+                        </Title>
 
-                        <div style={{ marginTop: 8, textAlign: "center", fontSize: 14 }}>
-                            Не зарегистрированы?{" "}
-                            <Link to="/register">Создать аккаунт</Link>
-                        </div>
-                    </div>
+                        <Form layout="vertical" onFinish={onFinish}>
+                            <Form.Item
+                                name="login"
+                                label="Логин"
+                                rules={[
+                                    { required: true, message: "Введите логин" },
+                                    { min: 2, max: 60, message: "От 2 до 60 символов" },
+                                ]}
+                            >
+                                <Input placeholder="ivan_ivanov" />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="password"
+                                label="Пароль"
+                                rules={[{ required: true, message: "Введите пароль" }]}
+                            >
+                                <Input.Password />
+                            </Form.Item>
+
+                            <Button type="primary" htmlType="submit" block>
+                                Войти
+                            </Button>
+
+                            <div style={{ marginTop: 12, textAlign: "center" }}>
+                                Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+                            </div>
+                        </Form>
+                    </Card>
                 </div>
             </div>
         </div>

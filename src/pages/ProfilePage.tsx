@@ -1,46 +1,44 @@
-import { useEffect, useRef } from "react";
-import { Card, Descriptions, Typography, App as AntdApp } from "antd";
+import { useEffect } from "react";
+import { Card, Spin } from "antd";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { fetchProfileThunk } from "../features/auth/authSlice";
-
-const { Title } = Typography;
+import { selectProfileView } from "../features/auth/selectors";
 
 export default function ProfilePage() {
     const dispatch = useAppDispatch();
-    const { message } = AntdApp.useApp();
-    const loadedRef = useRef(false);
-    const profile = useAppSelector((s) => s.auth.profile);
-    const isAuthorization = useAppSelector((s) => s.auth.isAuthorization);
-
+    const { data: profile, status } = useAppSelector(selectProfileView);
     useEffect(() => {
-        if (!loadedRef.current && isAuthorization && !profile) {
-            loadedRef.current = true;
-            dispatch(fetchProfileThunk()).catch(() => {
-                message.error("Не удалось загрузить профиль");
-            });
+        if (status.isIdle) {
+            dispatch(fetchProfileThunk());
         }
-    }, [dispatch, isAuthorization, profile, message]);
+    }, [status.isIdle, dispatch]);
+
+    if (status.isLoadingOrIdle) {
+        return (
+            <div style={{ display: "grid", placeItems: "center", minHeight: "50vh" }}>
+                <Spin size="large" />
+            </div>
+        );
+    }
 
     if (!profile) {
         return (
-            <div className="page">
-                <Card className="content-card">Загрузка…</Card>
+            <div style={{ padding: 24 }}>
+                <Card>Не удалось загрузить профиль.</Card>
             </div>
         );
     }
 
     return (
         <div className="page">
-            <Card className="content-card">
-                <Title level={3} style={{ marginBottom: 16 }}>
-                    Профиль
-                </Title>
-                <Descriptions column={1} bordered>
-                    <Descriptions.Item label="Логин">{profile.username || "—"}</Descriptions.Item>
-                    <Descriptions.Item label="Почта">{profile.email || "—"}</Descriptions.Item>
-                    <Descriptions.Item label="Телефон">{profile.phoneNumber || "—"}</Descriptions.Item>
-                </Descriptions>
-            </Card>
+            <div className="content-card">
+                <h1 className="page-title">Профиль</h1>
+                <div style={{ lineHeight: 1.9 }}>
+                    <div><b>Почта:</b> {profile.email}</div>
+                    <div><b>Телефон:</b> {profile.phoneNumber || "—"}</div>
+                    <div><b>Логин:</b> {profile.username}</div>
+                </div>
+            </div>
         </div>
     );
 }

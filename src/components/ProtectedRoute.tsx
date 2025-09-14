@@ -4,15 +4,15 @@ import { useAppSelector } from "../store/hooks";
 
 export default function ProtectedRoute() {
     const isReady = useAppSelector((s) => s.auth.isReady);
-    const isAuth = useAppSelector((s) => s.auth.isAuth);
+    const isAuthorization = useAppSelector((s) => s.auth.isAuthorization);
 
     if (!isReady) {
         return (
-            <div style={{ display: "grid", placeItems: "center", minHeight: "50vh" }}>
-                <Spin spinning size="large" />
+            <div style={{ display: "grid", placeItems: "center", minHeight: "60vh" }}>
+                <Spin />
             </div>
         );
     }
 
-    return isAuth ? <Outlet /> : <Navigate to="/login" replace />;
+    return isAuthorization ? <Outlet /> : <Navigate to="/login" replace />;
 }
