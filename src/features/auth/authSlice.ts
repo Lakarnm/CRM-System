@@ -1,3 +1,4 @@
+import axios from "axios";
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import type { AuthData, UserRegistration, Token, RefreshToken, Profile } from "../../types/types";
 import {
@@ -12,19 +13,28 @@ import {
 import { addAsyncBuilderCases, initAsyncParticle } from "../../store/utils";
 import { authInitialState, type AuthSliceState } from "../../store/initialState";
 
+type ServerError = { message?: string };
+const extractErrorMessage = (error: unknown, fallback: string) => {
+    if (axios.isAxiosError(error)) {
+        const data = error.response?.data;
+        if (typeof data === "string") return data;
+        const msg = (data as ServerError | undefined)?.message;
+        if (msg) return msg;
+    }
+    if (error instanceof Error && error.message) return error.message;
+    return fallback;
+};
+
 /* THUNKS */
+
 export const register = createAsyncThunk<Profile, UserRegistration, { rejectValue: string }>(
     "auth/register",
     async (payload, { rejectWithValue }) => {
         try {
             return await registerUser(payload);
-        } catch (err: any) {
-            const status = err?.response?.status;
-            const raw = err?.response?.data;
-            const text = typeof raw === "string" ? raw : raw?.message || "";
-            if (status === 409) return rejectWithValue(text || "Логин или email уже заняты");
-            if (status === 400) return rejectWithValue(text || "Некорректные данные регистрации");
-            return rejectWithValue(text || "Ошибка регистрации");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Ошибка регистрации");
+            return rejectWithValue(message);
         }
     }
 );
@@ -36,9 +46,9 @@ export const login = createAsyncThunk<Token, AuthData, { rejectValue: string }>(
             const tokens = await loginUser(payload);
             localStorage.setItem("refreshToken", tokens.refreshToken);
             return tokens;
-        } catch (err: any) {
-            const raw = err?.response?.data;
-            return rejectWithValue(typeof raw === "string" ? raw : "Неверные логин или пароль");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Неверные логин или пароль");
+            return rejectWithValue(message);
         }
     }
 );
@@ -51,8 +61,9 @@ export const refreshAccess = createAsyncThunk<Token, void, { rejectValue: string
             if (!stored) throw new Error("Нет refresh токена");
             const payload: RefreshToken = { refreshToken: stored };
             return await apiRefreshToken(payload);
-        } catch {
-            return rejectWithValue("Сессия истекла");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Сессия истекла");
+            return rejectWithValue(message);
         }
     }
 );
@@ -62,9 +73,9 @@ export const fetchProfileThunk = createAsyncThunk<Profile, void, { rejectValue: 
     async (_, { rejectWithValue }) => {
         try {
             return await apiGetProfile();
-        } catch (err: any) {
-            const raw = err?.response?.data;
-            return rejectWithValue(typeof raw === "string" ? raw : "Ошибка загрузки профиля");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Ошибка загрузки профиля");
+            return rejectWithValue(message);
         }
     }
 );
@@ -75,9 +86,9 @@ export const logout = createAsyncThunk<void, void, { rejectValue: string }>(
         try {
             await apiLogoutUser();
             localStorage.removeItem("refreshToken");
-        } catch (err: any) {
-            const raw = err?.response?.data;
-            return rejectWithValue(typeof raw === "string" ? raw : "Ошибка выхода");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Ошибка выхода");
+            return rejectWithValue(message);
         }
     }
 );
@@ -89,8 +100,8 @@ export const initAuth = createAsyncThunk("auth/initAuth", async (_, { dispatch }
         return;
     }
     try {
-        const t = await dispatch(refreshAccess()).unwrap();
-        setApiAccessToken(t.accessToken);
+        const tokens = await dispatch(refreshAccess()).unwrap();
+        setApiAccessToken(tokens.accessToken);
         await dispatch(fetchProfileThunk());
     } catch {
         setApiAccessToken(null);
@@ -100,6 +111,7 @@ export const initAuth = createAsyncThunk("auth/initAuth", async (_, { dispatch }
 });
 
 /* SLICE */
+
 const authSlice = createSlice({
     name: "auth",
     initialState: authInitialState as AuthSliceState,
@@ -111,52 +123,56 @@ const authSlice = createSlice({
             state.isReady = action.payload;
         },
     },
-    extraReducers: (b) => {
+    extraReducers: (builder) => {
         // REGISTER
-        b.addCase(register.rejected, (s, a) => {
-            s.error = (a.payload as string) || "Ошибка регистрации";
+        builder.addCase(register.rejected, (state, action) => {
+            state.error = (action.payload as string) || "Ошибка регистрации";
         });
 
         // LOGIN
-        b.addCase(login.fulfilled, (s, a: PayloadAction<Token>) => {
-            s.accessToken = a.payload.accessToken;
-            s.refreshToken = a.payload.refreshToken;
-            s.isAuthorization = true;
-            setApiAccessToken(a.payload.accessToken);
-            s.error = null;
+        builder.addCase(login.fulfilled, (state, action: PayloadAction<Token>) => {
+            state.accessToken = action.payload.accessToken;
+            state.refreshToken = action.payload.refreshToken;
+            state.isAuthorization = true;
+            setApiAccessToken(action.payload.accessToken);
+            state.error = null;
         });
-        b.addCase(login.rejected, (s, a) => {
-            s.isAuthorization = false;
-            s.error = (a.payload as string) || "Ошибка входа";
+        builder.addCase(login.rejected, (state, action) => {
+            state.isAuthorization = false;
+            state.error = (action.payload as string) || "Ошибка входа";
         });
 
         // REFRESH
-        b.addCase(refreshAccess.fulfilled, (s, a: PayloadAction<Token>) => {
-            s.accessToken = a.payload.accessToken;
-            s.refreshToken = a.payload.refreshToken;
-            s.isAuthorization = true;
-            localStorage.setItem("refreshToken", a.payload.refreshToken);
-            setApiAccessToken(a.payload.accessToken);
-            s.error = null;
+        builder.addCase(refreshAccess.fulfilled, (state, action: PayloadAction<Token>) => {
+            state.accessToken = action.payload.accessToken;
+            state.refreshToken = action.payload.refreshToken;
+            state.isAuthorization = true;
+            localStorage.setItem("refreshToken", action.payload.refreshToken);
+            setApiAccessToken(action.payload.accessToken);
+            state.error = null;
         });
-        b.addCase(refreshAccess.rejected, (s) => {
-            s.profile = initAsyncParticle<Profile | null>(null);
-            s.accessToken = null;
-            s.refreshToken = null;
-            s.isAuthorization = false;
+        builder.addCase(refreshAccess.rejected, (state) => {
+            state.profile = initAsyncParticle<Profile>(null);
+            state.accessToken = null;
+            state.refreshToken = null;
+            state.isAuthorization = false;
             localStorage.removeItem("refreshToken");
             setApiAccessToken(null);
         });
 
         // PROFILE
-        addAsyncBuilderCases(b, fetchProfileThunk, "profile");
+        addAsyncBuilderCases<AuthSliceState, Profile, void, string>(
+            builder,
+            fetchProfileThunk,
+            (state) => state.profile
+        );
 
         // LOGOUT
-        b.addCase(logout.fulfilled, (s) => {
-            s.profile = initAsyncParticle<Profile | null>(null);
-            s.accessToken = null;
-            s.refreshToken = null;
-            s.isAuthorization = false;
+        builder.addCase(logout.fulfilled, (state) => {
+            state.profile = initAsyncParticle<Profile>(null);
+            state.accessToken = null;
+            state.refreshToken = null;
+            state.isAuthorization = false;
             setApiAccessToken(null);
         });
     },

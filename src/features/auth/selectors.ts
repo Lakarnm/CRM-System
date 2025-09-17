@@ -4,17 +4,14 @@ import type { Profile } from "../../types/types";
 import type { AuthSliceState } from "../../store/initialState";
 import { getAsyncRequestData } from "../../store/utils";
 
-export const selectAuthStore = (s: RootState): AuthSliceState => s.auth;
+export const selectAuthStore = (selector: RootState): AuthSliceState => selector.auth;
 
 export const selectProfileParticle = createSelector(
     selectAuthStore,
-    (s) => s.profile
+    (selector) => selector.profile
 );
 
 export const selectProfileView = createSelector(
     selectProfileParticle,
     (particle) => getAsyncRequestData<Profile | null>(particle)
 );
-
-
-

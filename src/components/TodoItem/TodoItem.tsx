@@ -3,108 +3,114 @@ import { Checkbox, Button, Input, Space, Popconfirm, message } from "antd";
 import { Todo, TodoRequest } from "../../types/types";
 import { updateTodo, deleteTodo } from "../../api/api";
 
-type Props = {
+interface Props {
     todo: Todo;
     onUpdate: () => Promise<void>;
-    setIsEditing: (v: boolean) => void;
-};
+    setIsEditing: (isEditing: boolean) => void;
+}
 
 export default function TodoItem({ todo, onUpdate, setIsEditing }: Props) {
-    const [title, setTitle] = useState(todo.title);
-    const [saving, setSaving] = useState(false);
-    const [editing, setEditing] = useState(false);
+    const [title, setTitle] = useState<string>(todo.title);
+    const [isSaving, setIsSaving] = useState<boolean>(false);
+    const [isEditingLocal, setIsEditingLocal] = useState<boolean>(false);
 
     const toggleDone = async () => {
         try {
-            setSaving(true);
+            setIsSaving(true);
             const patch: TodoRequest = { isDone: !todo.isDone };
             await updateTodo(todo.id, patch);
             await onUpdate();
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error(error);
             message.error("Не удалось изменить статус задачи");
         } finally {
-            setSaving(false);
+            setIsSaving(false);
         }
     };
 
     const handleDelete = async () => {
         try {
-            setSaving(true);
+            setIsSaving(true);
             await deleteTodo(todo.id);
             await onUpdate();
             message.success("Задача удалена");
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error(error);
             message.error("Не удалось удалить задачу");
         } finally {
-            setSaving(false);
+            setIsSaving(false);
         }
     };
 
     const startEdit = () => {
-        setEditing(true);
+        setIsEditingLocal(true);
         setIsEditing(true);
     };
 
     const cancelEdit = () => {
-        setEditing(false);
+        setIsEditingLocal(false);
         setIsEditing(false);
         setTitle(todo.title);
     };
 
     const saveEdit = async () => {
-        const t = title.trim();
-        if (!t) return message.warning("Введите название");
+        const trimmedTitle = title.trim();
+        if (!trimmedTitle) {
+            message.warning("Введите название");
+            return;
+        }
         try {
-            setSaving(true);
-            const patch: TodoRequest = { title: t };
+            setIsSaving(true);
+            const patch: TodoRequest = { title: trimmedTitle };
             await updateTodo(todo.id, patch);
-            setEditing(false);
+            setIsEditingLocal(false);
             setIsEditing(false);
             await onUpdate();
             message.success("Изменения сохранены");
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error(error);
             message.error("Не удалось сохранить изменения");
         } finally {
-            setSaving(false);
+            setIsSaving(false);
         }
     };
 
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
-            <Checkbox checked={todo.isDone} onChange={toggleDone} disabled={saving} />
-            {editing ? (
+            <Checkbox checked={todo.isDone} onChange={toggleDone} disabled={isSaving} />
+            {isEditingLocal ? (
                 <Input
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(evt) => setTitle(evt.target.value)}
                     onPressEnter={saveEdit}
                     style={{ maxWidth: 420 }}
                 />
             ) : (
-                <span style={{ textDecoration: todo.isDone ? "line-through" : "none" }}>
-          {todo.title}
-        </span>
+                <span style={{ textDecoration: todo.isDone ? "line-through" : "none" }}>{todo.title}</span>
             )}
 
             <Space style={{ marginLeft: "auto" }}>
-                {editing ? (
+                {isEditingLocal ? (
                     <>
-                        <Button size="small" onClick={cancelEdit} disabled={saving}>
+                        <Button size="small" onClick={cancelEdit} disabled={isSaving}>
                             Отменить
                         </Button>
-                        <Button size="small" type="primary" onClick={saveEdit} loading={saving}>
+                        <Button size="small" type="primary" onClick={saveEdit} loading={isSaving}>
                             Сохранить
                         </Button>
                     </>
                 ) : (
                     <>
-                        <Button size="small" onClick={startEdit} disabled={saving}>
+                        <Button size="small" onClick={startEdit} disabled={isSaving}>
                             Редактировать
                         </Button>
-                        <Popconfirm title="Удалить задачу?" onConfirm={handleDelete} okText="Да" cancelText="Нет">
-                            <Button size="small" danger loading={saving}>
+                        <Popconfirm
+                            title="Удалить задачу?"
+                            onConfirm={handleDelete}
+                            okText="Да"
+                            cancelText="Нет"
+                        >
+                            <Button size="small" danger loading={isSaving}>
                                 Удалить
                             </Button>
                         </Popconfirm>

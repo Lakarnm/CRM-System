@@ -10,13 +10,14 @@ export default function LoginPage() {
     const navigate = useNavigate();
     const { message } = AntdApp.useApp();
 
-    const onFinish = async (v: { login: string; password: string }) => {
+    const onFinish = async (values: { login: string; password: string }) => {
         try {
-            await dispatch(login({ login: v.login.trim(), password: v.password })).unwrap();
+            await dispatch(login({ login: values.login.trim(), password: values.password })).unwrap();
             message.success("Добро пожаловать!");
             navigate("/");
-        } catch (e: any) {
-            message.error(typeof e === "string" ? e : "Неверные логин или пароль");
+        } catch (error: unknown) {
+            const text = typeof error === "string" ? error : "Неверные логин или пароль";
+            message.error(text);
         }
     };
 

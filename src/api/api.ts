@@ -1,81 +1,114 @@
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosError, AxiosHeaders, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
 import { UserRegistration, AuthData, RefreshToken, Profile, Token, // AUTH
-        Todo, TodoInfo, MetaResponse, TodoRequest, FilterStatus, // TODOS
+    Todo, TodoInfo, MetaResponse, TodoRequest, FilterStatus, // TODOS
 } from "../types/types";
 
 const BASE_URL = "https://easydev.club/api/v1";
 
-class AccessTokenStore {
-    private _token: string | null = null;
-    get = () => this._token;
-    set = (t: string | null) => {
-        this._token = t;
+const tokenStore = (() => {
+    let token: string | null = null;
+    return {
+        get(): string | null {
+            return token;
+        },
+        set(value: string | null) {
+            token = value;
+        },
+        clear() {
+            token = null;
+        },
     };
-    clear = () => {
-        this._token = null;
-    };
+})();
+export const setAccessToken = (value: string | null) => tokenStore.set(value);
+
+/* HEADERS */
+function toAxiosHeaders(
+    headers: AxiosRequestConfig["headers"] | undefined
+): AxiosHeaders {
+    return headers instanceof AxiosHeaders ? headers : new AxiosHeaders(headers);
 }
-export const tokenStore = new AccessTokenStore();
-export const setAccessToken = (t: string | null) => tokenStore.set(t);
 
-let isRefreshing = false;
-type Subscriber = (token: string | null) => void;
-const subscribers: Subscriber[] = [];
-const subscribe = (cb: Subscriber) => subscribers.push(cb);
-const flush = (token: string | null) => {
-    while (subscribers.length) subscribers.shift()!(token);
-};
+function withAuthHeader(
+    headers: AxiosRequestConfig["headers"] | undefined,
+    accessToken: string
+): AxiosHeaders {
+    const normalized = toAxiosHeaders(headers);
+    normalized.set("Authorization", `Bearer ${accessToken}`);
+    return normalized;
+}
 
-const http: AxiosInstance = axios.create({
-    baseURL: BASE_URL,
-});
+/* AXIOS */
+const http: AxiosInstance = axios.create({ baseURL: BASE_URL });
 
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    const at = tokenStore.get();
-    if (at) {
-        config.headers = config.headers ?? {};
-        (config.headers as any).Authorization = `Bearer ${at}`;
+    const accessToken = tokenStore.get();
+    if (accessToken) {
+        config.headers = withAuthHeader(config.headers, accessToken);
     }
     return config;
 });
 
-http.interceptors.response.use(
-    (r) => r,
-    async (error: AxiosError) => {
-        const original = error.config as AxiosRequestConfig & { _retry?: boolean };
-        const status = error.response?.status ?? 0;
-        const isAuthRefresh = (original?.url ?? "").includes("/auth/refresh");
+let isRefreshing = false;
+type RefreshSubscriber = (newAccessToken: string | null) => void;
+const refreshSubscribers: RefreshSubscriber[] = [];
 
-        if (status === 401 && !original?._retry && !isAuthRefresh) {
-            const stored = localStorage.getItem("refreshToken");
-            if (!stored) return Promise.reject(error);
-            original._retry = true;
+const subscribeRefresh = (subscriber: RefreshSubscriber) => {
+    refreshSubscribers.push(subscriber);
+};
+const notifyRefreshSubscribers = (newAccessToken: string | null) => {
+    while (refreshSubscribers.length) {
+        const subscriber = refreshSubscribers.shift()!;
+        subscriber(newAccessToken);
+    }
+};
+
+type RetryableConfig =
+    | (AxiosRequestConfig & { _retry?: boolean })
+    | (InternalAxiosRequestConfig & { _retry?: boolean });
+
+http.interceptors.response.use(
+    (response) => response,
+    async (error: AxiosError) => {
+        const originalRequest = error.config as RetryableConfig | undefined;
+        const status = error.response?.status ?? 0;
+        const isRefreshCall = (originalRequest?.url ?? "").includes("/auth/refresh");
+
+        if (status === 401 && originalRequest && !originalRequest._retry && !isRefreshCall) {
+            const storedRefresh = localStorage.getItem("refreshToken");
+            if (!storedRefresh) {
+                return Promise.reject(error);
+            }
+
+            originalRequest._retry = true;
 
             if (!isRefreshing) {
                 isRefreshing = true;
                 try {
                     const { data } = await http.post<Token>("/auth/refresh", {
-                        refreshToken: stored,
+                        refreshToken: storedRefresh,
                     });
+
                     tokenStore.set(data.accessToken);
                     localStorage.setItem("refreshToken", data.refreshToken);
                     isRefreshing = false;
-                    flush(tokenStore.get());
-                } catch (e) {
+                    notifyRefreshSubscribers(data.accessToken);
+                } catch {
                     isRefreshing = false;
                     localStorage.removeItem("refreshToken");
                     tokenStore.clear();
-                    flush(null);
+                    notifyRefreshSubscribers(null);
                     return Promise.reject(error);
                 }
             }
 
             return new Promise((resolve, reject) => {
-                subscribe((token) => {
-                    if (token) {
-                        original.headers = original.headers ?? {};
-                        (original.headers as any).Authorization = `Bearer ${token}`;
-                        resolve(http(original));
+                subscribeRefresh((newAccessToken) => {
+                    if (newAccessToken) {
+                        originalRequest.headers = withAuthHeader(
+                            originalRequest.headers,
+                            newAccessToken
+                        );
+                        resolve(http(originalRequest));
                     } else {
                         reject(error);
                     }
@@ -88,7 +121,6 @@ http.interceptors.response.use(
 );
 
 /* AUTH */
-
 export async function registerUser(payload: UserRegistration): Promise<Profile> {
     const { data } = await http.post<Profile>("/auth/signup", payload);
     return data;
@@ -116,14 +148,11 @@ export async function logoutUser(): Promise<void> {
 }
 
 /* TODOS */
-
 export async function fetchTodos(
     filter: FilterStatus
 ): Promise<MetaResponse<Todo, TodoInfo>> {
     const params = { status: filter ?? "all" };
-    const { data } = await http.get<MetaResponse<Todo, TodoInfo>>("/todos", {
-        params,
-    });
+    const { data } = await http.get<MetaResponse<Todo, TodoInfo>>("/todos", { params });
     return data;
 }
 
@@ -132,10 +161,7 @@ export async function createTodo(payload: TodoRequest): Promise<Todo> {
     return data;
 }
 
-export async function updateTodo(
-    id: number,
-    payload: TodoRequest
-): Promise<Todo> {
+export async function updateTodo(id: number, payload: TodoRequest): Promise<Todo> {
     const { data } = await http.put<Todo>(`/todos/${id}`, payload);
     return data;
 }

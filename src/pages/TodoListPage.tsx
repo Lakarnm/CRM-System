@@ -9,48 +9,42 @@ export default function TodoListPage() {
     const { message } = AntdApp.useApp();
 
     const [todos, setTodos] = useState<Todo[]>([]);
-    const [todoInfo, setTodoInfo] = useState<TodoInfo>({
-        all: 0,
-        inWork: 0,
-        completed: 0,
-    });
+    const [todoInfo, setTodoInfo] = useState<TodoInfo>({ all: 0, inWork: 0, completed: 0 });
     const [filter, setFilter] = useState<FilterStatus>("all");
     const [loading, setLoading] = useState<boolean>(false);
     const [isEditing, setIsEditing] = useState<boolean>(false);
 
     const [form] = Form.useForm();
 
-    const intervalRef = useRef<number | null>(null);
+    const pollIntervalRef = useRef<number | null>(null);
     const lastRequestIdRef = useRef(0);
+    const didInitRef = useRef(false);
 
     const loadTodos = useCallback(async () => {
         const requestId = ++lastRequestIdRef.current;
         try {
             setLoading(true);
-            const res: MetaResponse<Todo, TodoInfo> = await fetchTodos(filter);
+            const response: MetaResponse<Todo, TodoInfo> = await fetchTodos(filter);
 
             if (requestId !== lastRequestIdRef.current) return;
 
-            const serverData = res.data ?? [];
-
-            const clientFiltered =
+            const normalizedList =
                 filter === "all"
-                    ? serverData
-                    : serverData.filter((t) =>
-                        filter === "completed" ? t.isDone : !t.isDone
-                    );
+                    ? response.data
+                    : filter === "inWork"
+                        ? response.data.filter((todoItem) => !todoItem.isDone)
+                        : response.data.filter((todoItem) => todoItem.isDone);
 
-            setTodos(clientFiltered);
-
+            setTodos(normalizedList);
             setTodoInfo(
-                res.info ?? {
-                    all: serverData.length,
-                    inWork: serverData.filter((t) => !t.isDone).length,
-                    completed: serverData.filter((t) => t.isDone).length,
+                response.info ?? {
+                    all: response.data.length,
+                    inWork: response.data.filter((todoItem) => !todoItem.isDone).length,
+                    completed: response.data.filter((todoItem) => todoItem.isDone).length,
                 }
             );
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error(error);
             message.error("Не удалось загрузить задачи");
         } finally {
             setLoading(false);
@@ -58,21 +52,29 @@ export default function TodoListPage() {
     }, [filter, message]);
 
     useEffect(() => {
-        void loadTodos();
 
-        if (intervalRef.current) {
-            window.clearInterval(intervalRef.current);
-            intervalRef.current = null;
+        if (!didInitRef.current) {
+            didInitRef.current = true;
+            void loadTodos();
+        } else {
+            void loadTodos();
         }
+
+        if (pollIntervalRef.current) {
+            window.clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+        }
+
         if (!isEditing) {
-            intervalRef.current = window.setInterval(() => {
+            pollIntervalRef.current = window.setInterval(() => {
                 void loadTodos();
             }, 5000);
         }
+
         return () => {
-            if (intervalRef.current) {
-                window.clearInterval(intervalRef.current);
-                intervalRef.current = null;
+            if (pollIntervalRef.current) {
+                window.clearInterval(pollIntervalRef.current);
+                pollIntervalRef.current = null;
             }
         };
     }, [loadTodos, isEditing]);
@@ -88,8 +90,8 @@ export default function TodoListPage() {
             message.success("Задача создана");
             form.resetFields();
             await loadTodos();
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error(error);
             message.error("Не удалось создать задачу");
         }
     };
@@ -103,12 +105,7 @@ export default function TodoListPage() {
             <div className="content-card">
                 <h1 className="page-title">Список задач</h1>
 
-                <Form
-                    form={form}
-                    onFinish={handleAddTodo}
-                    layout="inline"
-                    className="toolbar-form"
-                >
+                <Form form={form} onFinish={handleAddTodo} layout="inline" className="toolbar-form">
                     <Form.Item
                         name="title"
                         className="toolbar-form__input"
@@ -128,17 +125,9 @@ export default function TodoListPage() {
                     </Form.Item>
                 </Form>
 
-                <TodoTabs
-                    selectedTab={filter}
-                    onSelectTab={handleSelectTab}
-                    todoInfo={todoInfo}
-                />
+                <TodoTabs selectedTab={filter} onSelectTab={handleSelectTab} todoInfo={todoInfo} />
 
-                <TodoList
-                    todos={todos}
-                    onUpdate={loadTodos}
-                    setIsEditing={setIsEditing}
-                />
+                <TodoList todos={todos} onUpdate={loadTodos} setIsEditing={setIsEditing} />
             </div>
         </div>
     );

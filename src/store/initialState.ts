@@ -2,7 +2,7 @@ import { initAsyncParticle, type IAsyncParticle } from "./utils";
 import type { Profile } from "../types/types";
 
 export type AuthSliceState = {
-    profile: IAsyncParticle<Profile | null>;
+    profile: IAsyncParticle<Profile>;
     accessToken: string | null;
     refreshToken: string | null;
     error: string | null;
@@ -11,9 +11,9 @@ export type AuthSliceState = {
 };
 
 export const authInitialState: AuthSliceState = {
-    profile: initAsyncParticle<Profile | null>(null),
+    profile: initAsyncParticle<Profile>(null),
     accessToken: null,
-    refreshToken: localStorage.getItem("refreshToken"),
+    refreshToken: null,
     error: null,
     isReady: false,
     isAuthorization: false,

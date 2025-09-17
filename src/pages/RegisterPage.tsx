@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button, Card, Form, Input, Typography, App as AntdApp } from "antd";
 import { useAppDispatch } from "../store/hooks";
 import { register } from "../features/auth/authSlice";
@@ -11,9 +11,9 @@ export default function RegisterPage() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const { message } = AntdApp.useApp();
-    const [submitting, setSubmitting] = useState(false);
+    const [submitting, setSubmitting] = useState<boolean>(false);
 
-    const onFinish = async (v: {
+    const onFinish = async (values: {
         username: string;
         login: string;
         password: string;
@@ -21,17 +21,17 @@ export default function RegisterPage() {
         email: string;
         phoneNumber?: string;
     }) => {
-        if (v.password !== v.confirmPassword) {
+        if (values.password !== values.confirmPassword) {
             message.error("Пароли не совпадают");
             return;
         }
 
         const payload: UserRegistration = {
-            username: v.username.trim(),
-            login: v.login.trim(),
-            password: v.password,
-            email: v.email.trim(),
-            phoneNumber: (v.phoneNumber ?? "").trim(),
+            username: values.username.trim(),
+            login: values.login.trim(),
+            password: values.password,
+            email: values.email.trim(),
+            phoneNumber: (values.phoneNumber ?? "").trim(),
         };
 
         try {
@@ -39,8 +39,12 @@ export default function RegisterPage() {
             await dispatch(register(payload)).unwrap();
             message.success("Регистрация прошла успешно. Перейдите к авторизации.");
             navigate("/login");
-        } catch (e: any) {
-            message.error(typeof e === "string" ? e : e?.message || "Ошибка регистрации");
+        } catch (error) {
+            const text =
+                typeof error === "string"
+                    ? error
+                    : (error as { message?: string })?.message || "Ошибка регистрации";
+            message.error(text);
         } finally {
             setSubmitting(false);
         }
@@ -67,7 +71,10 @@ export default function RegisterPage() {
                                 rules={[
                                     { required: true, message: "Введите имя пользователя" },
                                     { min: 1, max: 60, message: "От 1 до 60 символов" },
-                                    { pattern: /^[A-Za-zА-Яа-яЁё\s-]+$/, message: "Только буквы русского/латинского алфавита" },
+                                    {
+                                        pattern: /^[A-Za-zА-Яа-яЁё\s-]+$/,
+                                        message: "Только буквы русского/латинского алфавита",
+                                    },
                                 ]}
                             >
                                 <Input placeholder="Иван Иванов" />
@@ -79,7 +86,10 @@ export default function RegisterPage() {
                                 rules={[
                                     { required: true, message: "Введите логин" },
                                     { min: 2, max: 60, message: "От 2 до 60 символов" },
-                                    { pattern: /^[A-Za-z0-9._-]+$/, message: "Только латиница/цифры/._-" },
+                                    {
+                                        pattern: /^[A-Za-z0-9._-]+$/,
+                                        message: "Только латиница/цифры/._-",
+                                    },
                                 ]}
                             >
                                 <Input placeholder="ivan_ivanov" />
@@ -100,7 +110,10 @@ export default function RegisterPage() {
                                 name="phoneNumber"
                                 label="Телефон (необязательно)"
                                 rules={[
-                                    { pattern: /^\+?\d{10,15}$/, message: "Некорректный номер (пример: +79991234567)" },
+                                    {
+                                        pattern: /^\+?\d{10,15}$/,
+                                        message: "Некорректный номер (пример: +79991234567)",
+                                    },
                                 ]}
                             >
                                 <Input placeholder="+79991234567" />
@@ -127,7 +140,9 @@ export default function RegisterPage() {
                                     { required: true, message: "Повторите пароль" },
                                     ({ getFieldValue }) => ({
                                         validator(_, value) {
-                                            if (!value || getFieldValue("password") === value) return Promise.resolve();
+                                            if (!value || getFieldValue("password") === value) {
+                                                return Promise.resolve();
+                                            }
                                             return Promise.reject(new Error("Пароли не совпадают"));
                                         },
                                     }),
