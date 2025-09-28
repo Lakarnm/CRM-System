@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Checkbox, Button, Input, Space, Popconfirm, message } from "antd";
 import { Todo, TodoRequest } from "../../types/types";
-import { updateTodo, deleteTodo } from "../../api/api";
+import { updateTodo, deleteTodo } from "../../api/todosApi";
+import { useAppDispatch } from "../../store/hooks";
+import { logout } from "../../features/auth/authSlice";
 
 interface Props {
     todo: Todo;
@@ -13,16 +15,28 @@ export default function TodoItem({ todo, onUpdate, setIsEditing }: Props) {
     const [title, setTitle] = useState<string>(todo.title);
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [isEditingLocal, setIsEditingLocal] = useState<boolean>(false);
+    const dispatch = useAppDispatch();
 
-    const toggleDone = async () => {
+    const handleUnauthorizedError = (error: unknown) => {
+        if ((error as { response?: { status: number } })?.response?.status === 401) {
+            message.error("Сессия истекла. Пожалуйста, войдите снова.");
+            dispatch(logout());
+            return true;
+        }
+        return false;
+    };
+
+    const handleDone = async () => {
         try {
             setIsSaving(true);
             const patch: TodoRequest = { isDone: !todo.isDone };
             await updateTodo(todo.id, patch);
             await onUpdate();
         } catch (error) {
-            console.error(error);
-            message.error("Не удалось изменить статус задачи");
+            console.error("Error updating todo status:", error);
+            if (!handleUnauthorizedError(error)) {
+                message.error("Не удалось изменить статус задачи");
+            }
         } finally {
             setIsSaving(false);
         }
@@ -35,8 +49,10 @@ export default function TodoItem({ todo, onUpdate, setIsEditing }: Props) {
             await onUpdate();
             message.success("Задача удалена");
         } catch (error) {
-            console.error(error);
-            message.error("Не удалось удалить задачу");
+            console.error("Error deleting todo:", error);
+            if (!handleUnauthorizedError(error)) {
+                message.error("Не удалось удалить задачу");
+            }
         } finally {
             setIsSaving(false);
         }
@@ -68,8 +84,10 @@ export default function TodoItem({ todo, onUpdate, setIsEditing }: Props) {
             await onUpdate();
             message.success("Изменения сохранены");
         } catch (error) {
-            console.error(error);
-            message.error("Не удалось сохранить изменения");
+            console.error("Error saving todo:", error);
+            if (!handleUnauthorizedError(error)) {
+                message.error("Не удалось сохранить изменения");
+            }
         } finally {
             setIsSaving(false);
         }
@@ -77,7 +95,7 @@ export default function TodoItem({ todo, onUpdate, setIsEditing }: Props) {
 
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
-            <Checkbox checked={todo.isDone} onChange={toggleDone} disabled={isSaving} />
+            <Checkbox checked={todo.isDone} onChange={handleDone} disabled={isSaving} />
             {isEditingLocal ? (
                 <Input
                     value={title}

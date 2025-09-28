@@ -1,12 +1,15 @@
 import { useEffect } from "react";
-import { Card, Spin } from "antd";
+import { Card, Spin, Typography, Descriptions } from "antd";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { fetchProfileThunk } from "../features/auth/authSlice";
 import { selectProfileView } from "../features/auth/selectors";
 
+const { Title, Text } = Typography;
+
 export default function ProfilePage() {
     const dispatch = useAppDispatch();
     const { data: profile, status } = useAppSelector(selectProfileView);
+
     useEffect(() => {
         if (status.isIdle) {
             dispatch(fetchProfileThunk());
@@ -32,12 +35,26 @@ export default function ProfilePage() {
     return (
         <div className="page">
             <div className="content-card">
-                <h1 className="page-title">Профиль</h1>
-                <div style={{ lineHeight: 1.9 }}>
-                    <div><b>Почта:</b> {profile.email}</div>
-                    <div><b>Телефон:</b> {profile.phoneNumber || "—"}</div>
-                    <div><b>Логин:</b> {profile.username}</div>
-                </div>
+                <Title level={1} style={{ marginBottom: 24 }}>
+                    Профиль
+                </Title>
+
+                <Descriptions
+                    bordered
+                    column={1}
+                    size="middle"
+                    labelStyle={{ fontWeight: 600, width: '180px' }}
+                >
+                    <Descriptions.Item label="Почта">
+                        <Text>{profile.email}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Телефон">
+                        <Text>{profile.phoneNumber || "—"}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Имя пользователя">
+                        <Text>{profile.username}</Text>
+                    </Descriptions.Item>
+                </Descriptions>
             </div>
         </div>
     );

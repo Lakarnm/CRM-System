@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button, Form, Input, App as AntdApp } from "antd";
 import TodoList from "../components/TodoList/TodoList";
 import TodoTabs from "../components/Tabs/Tabs";
-import { fetchTodos, createTodo } from "../api/api";
-import { Todo, FilterStatus, TodoInfo, MetaResponse, TodoRequest } from "../types/types";
+import { fetchTodos, createTodo } from "../api/todosApi";
+import { Todo, FilterStatus, TodoInfo, TodoRequest } from "../types/types";
 
 export default function TodoListPage() {
     const { message } = AntdApp.useApp();
@@ -16,35 +16,19 @@ export default function TodoListPage() {
 
     const [form] = Form.useForm();
 
-    const pollIntervalRef = useRef<number | null>(null);
-    const lastRequestIdRef = useRef(0);
-    const didInitRef = useRef(false);
-
     const loadTodos = useCallback(async () => {
-        const requestId = ++lastRequestIdRef.current;
         try {
             setLoading(true);
-            const response: MetaResponse<Todo, TodoInfo> = await fetchTodos(filter);
+            const response = await fetchTodos(filter);
 
-            if (requestId !== lastRequestIdRef.current) return;
+            setTodos(response.data);
+            setTodoInfo(response.info || {
+                all: response.data.length,
+                inWork: response.data.filter(todo => !todo.isDone).length,
+                completed: response.data.filter(todo => todo.isDone).length,
+            });
 
-            const normalizedList =
-                filter === "all"
-                    ? response.data
-                    : filter === "inWork"
-                        ? response.data.filter((todoItem) => !todoItem.isDone)
-                        : response.data.filter((todoItem) => todoItem.isDone);
-
-            setTodos(normalizedList);
-            setTodoInfo(
-                response.info ?? {
-                    all: response.data.length,
-                    inWork: response.data.filter((todoItem) => !todoItem.isDone).length,
-                    completed: response.data.filter((todoItem) => todoItem.isDone).length,
-                }
-            );
         } catch (error) {
-            console.error(error);
             message.error("Не удалось загрузить задачи");
         } finally {
             setLoading(false);
@@ -52,32 +36,18 @@ export default function TodoListPage() {
     }, [filter, message]);
 
     useEffect(() => {
+        loadTodos();
 
-        if (!didInitRef.current) {
-            didInitRef.current = true;
-            void loadTodos();
-        } else {
-            void loadTodos();
-        }
+        const intervalId = setInterval(() => {
+            if (!isEditing) loadTodos();
+        }, 5000);
 
-        if (pollIntervalRef.current) {
-            window.clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
-        }
+        return () => clearInterval(intervalId);
+    }, [filter, isEditing, loadTodos]);
 
-        if (!isEditing) {
-            pollIntervalRef.current = window.setInterval(() => {
-                void loadTodos();
-            }, 5000);
-        }
-
-        return () => {
-            if (pollIntervalRef.current) {
-                window.clearInterval(pollIntervalRef.current);
-                pollIntervalRef.current = null;
-            }
-        };
-    }, [loadTodos, isEditing]);
+    const handleSelectTab = (key: FilterStatus) => {
+        setFilter(key);
+    };
 
     const handleAddTodo = async (values: { title: string }) => {
         const payload: TodoRequest = { title: values.title.trim() };
@@ -91,13 +61,8 @@ export default function TodoListPage() {
             form.resetFields();
             await loadTodos();
         } catch (error) {
-            console.error(error);
             message.error("Не удалось создать задачу");
         }
-    };
-
-    const handleSelectTab = (key: string) => {
-        setFilter(key as FilterStatus);
     };
 
     return (
@@ -109,15 +74,10 @@ export default function TodoListPage() {
                     <Form.Item
                         name="title"
                         className="toolbar-form__input"
-                        rules={[
-                            { required: true, message: "Введите задачу" },
-                            { min: 2, message: "Минимум 2 символа" },
-                            { max: 64, message: "Максимум 64 символа" },
-                        ]}
+                        rules={[{ required: true, message: "Введите задачу" }]}
                     >
                         <Input size="large" placeholder="Новая задача" />
                     </Form.Item>
-
                     <Form.Item className="toolbar-form__submit">
                         <Button type="primary" htmlType="submit" size="large" loading={loading}>
                             Добавить

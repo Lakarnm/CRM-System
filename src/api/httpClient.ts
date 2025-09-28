@@ -1,24 +1,22 @@
 import axios, { AxiosError, AxiosHeaders, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
-import { UserRegistration, AuthData, RefreshToken, Profile, Token, // AUTH
-    Todo, TodoInfo, MetaResponse, TodoRequest, FilterStatus, // TODOS
-} from "../types/types";
 
 const BASE_URL = "https://easydev.club/api/v1";
 
-const tokenStore = (() => {
-    let token: string | null = null;
-    return {
-        get(): string | null {
-            return token;
-        },
-        set(value: string | null) {
-            token = value;
-        },
-        clear() {
-            token = null;
-        },
-    };
-})();
+class AccessTokenStore {
+    private _token: string | null = null;
+
+    get(): string | null {
+        return this._token;
+    }
+    set(value: string | null): void {
+        this._token = value;
+    }
+    clear(): void {
+        this._token = null;
+    }
+}
+
+export const tokenStore = new AccessTokenStore();
 export const setAccessToken = (value: string | null) => tokenStore.set(value);
 
 /* HEADERS */
@@ -38,7 +36,7 @@ function withAuthHeader(
 }
 
 /* AXIOS */
-const http: AxiosInstance = axios.create({ baseURL: BASE_URL });
+export const http: AxiosInstance = axios.create({ baseURL: BASE_URL });
 
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     const accessToken = tokenStore.get();
@@ -56,9 +54,13 @@ const subscribeRefresh = (subscriber: RefreshSubscriber) => {
     refreshSubscribers.push(subscriber);
 };
 const notifyRefreshSubscribers = (newAccessToken: string | null) => {
-    while (refreshSubscribers.length) {
-        const subscriber = refreshSubscribers.shift()!;
-        subscriber(newAccessToken);
+    const subscribers = refreshSubscribers.splice(0);
+    for (const subscriber of subscribers) {
+        try {
+            subscriber(newAccessToken);
+        } catch (error) {
+            console.error("[refresh] subscriber failed:", error);
+        }
     }
 };
 
@@ -84,7 +86,7 @@ http.interceptors.response.use(
             if (!isRefreshing) {
                 isRefreshing = true;
                 try {
-                    const { data } = await http.post<Token>("/auth/refresh", {
+                    const { data } = await http.post<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
                         refreshToken: storedRefresh,
                     });
 
@@ -119,61 +121,3 @@ http.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-
-/* AUTH */
-export async function registerUser(payload: UserRegistration): Promise<Profile> {
-    const { data } = await http.post<Profile>("/auth/signup", payload);
-    return data;
-}
-
-export async function loginUser(payload: AuthData): Promise<Token> {
-    const { data } = await http.post<Token>("/auth/signin", payload);
-    return data;
-}
-
-export async function refreshToken(payload: RefreshToken): Promise<Token> {
-    const { data } = await http.post<Token>("/auth/refresh", payload);
-    return data;
-}
-
-export async function getProfile(): Promise<Profile> {
-    const { data } = await http.get<Profile>("/user/profile");
-    return data;
-}
-
-export async function logoutUser(): Promise<void> {
-    await http.post("/user/logout");
-    localStorage.removeItem("refreshToken");
-    tokenStore.clear();
-}
-
-/* TODOS */
-export async function fetchTodos(
-    filter: FilterStatus
-): Promise<MetaResponse<Todo, TodoInfo>> {
-    const params = { status: filter ?? "all" };
-    const { data } = await http.get<MetaResponse<Todo, TodoInfo>>("/todos", { params });
-    return data;
-}
-
-export async function createTodo(payload: TodoRequest): Promise<Todo> {
-    const { data } = await http.post<Todo>("/todos", payload);
-    return data;
-}
-
-export async function updateTodo(id: number, payload: TodoRequest): Promise<Todo> {
-    const { data } = await http.put<Todo>(`/todos/${id}`, payload);
-    return data;
-}
-
-export async function deleteTodo(id: number): Promise<Todo> {
-    const { data } = await http.delete<Todo>(`/todos/${id}`);
-    return data;
-}
-
-export async function getTodo(id: number): Promise<Todo> {
-    const { data } = await http.get<Todo>(`/todos/${id}`);
-    return data;
-}
-
-export { http };

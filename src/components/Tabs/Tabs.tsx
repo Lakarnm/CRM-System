@@ -22,7 +22,6 @@ const TodoTabs = ({ selectedTab, onSelectTab, todoInfo }: Props) => {
     return (
         <Tabs
             className="todo-tabs"
-            key={selectedTab}
             activeKey={selectedTab}
             onChange={(key) => onSelectTab(key as FilterStatus)}
             items={items}

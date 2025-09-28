@@ -3,8 +3,8 @@ import { Spin } from "antd";
 import { useAppSelector } from "../store/hooks";
 
 export default function ProtectedRoute() {
-    const isReady = useAppSelector((s) => s.auth.isReady);
-    const isAuthorization = useAppSelector((s) => s.auth.isAuthorization);
+    const isReady = useAppSelector((selector) => selector.auth.isReady);
+    const isAuthorization = useAppSelector((selector) => selector.auth.isAuthorization);
 
     if (!isReady) {
         return (

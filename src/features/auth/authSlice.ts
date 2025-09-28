@@ -7,8 +7,8 @@ import {
     refreshToken as apiRefreshToken,
     getProfile as apiGetProfile,
     logoutUser as apiLogoutUser,
-    setAccessToken as setApiAccessToken,
-} from "../../api/api";
+} from "../../api/authApi";
+import { setAccessToken as setApiAccessToken } from "../../api/httpClient";
 
 import { addAsyncBuilderCases, initAsyncParticle } from "../../store/utils";
 import { authInitialState, type AuthSliceState } from "../../store/initialState";
