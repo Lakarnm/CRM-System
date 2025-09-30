@@ -8,9 +8,9 @@ export default function LoginPage() {
     const navigate = useNavigate();
     const {message} = AntdApp.useApp();
 
-    const onFinish = async (values: { login: string; password: string }) => {
+    const onFinish = async ({ login: loginValue, password }: { login: string; password: string }) => {
         try {
-            await dispatch(login({login: values.login.trim(), password: values.password})).unwrap();
+            await dispatch(login({ login: loginValue.trim(), password })).unwrap();
             message.success("Добро пожаловать!");
             navigate("/");
         } catch (error: unknown) {

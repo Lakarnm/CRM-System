@@ -8,15 +8,15 @@ const { Title, Text } = Typography;
 
 export default function ProfilePage() {
     const dispatch = useAppDispatch();
-    const { data: profile, status } = useAppSelector(selectProfileView);
+    const { data: profile, status: { isIdle, isLoadingOrIdle } } = useAppSelector(selectProfileView);
 
     useEffect(() => {
-        if (status.isIdle) {
+        if (isIdle) {
             dispatch(fetchProfileThunk());
         }
-    }, [status.isIdle, dispatch]);
+    }, [isIdle, dispatch]);
 
-    if (status.isLoadingOrIdle) {
+    if (isLoadingOrIdle) {
         return (
             <div style={{ display: "grid", placeItems: "center", minHeight: "50vh" }}>
                 <Spin size="large" />

@@ -1,6 +1,3 @@
-import type { ActionReducerMapBuilder, AsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import type { Draft } from "immer";
-
 export type AsyncStatus = "idle" | "pending" | "fulfilled" | "rejected";
 
 export interface IAsyncParticle<TResult> {
@@ -16,37 +13,6 @@ export const initAsyncParticle = <TResult>(initialData: TResult | null = null): 
     errorCounter: 0,
     status: "idle",
 });
-
-export const addAsyncBuilderCases = < TState, TResult, TArg = void, TRejected = unknown >(
-    builder: ActionReducerMapBuilder<TState>,
-    thunk: AsyncThunk<TResult, TArg, { rejectValue: TRejected }>,
-    selectParticle: (state: Draft<TState>) => IAsyncParticle<TResult>
-) => {
-    builder.addCase(thunk.pending, (state) => {
-        const particle = selectParticle(state);
-        particle.status = "pending";
-        particle.error = null;
-    });
-
-    builder.addCase(thunk.fulfilled, (state, action: PayloadAction<TResult>) => {
-        const particle = selectParticle(state);
-        particle.status = "fulfilled";
-        particle.error = null;
-        particle.errorCounter = 0;
-        particle.data = action.payload ?? null;
-    });
-
-    builder.addCase(thunk.rejected, (state, action) => {
-        const particle = selectParticle(state);
-        particle.status = "rejected";
-        const payloadMessage = (action.payload as unknown as string) ?? undefined;
-        const errorMessage =
-            payloadMessage ??
-            (typeof action.error?.message === "string" ? action.error.message : "Ошибка запроса");
-        particle.error = errorMessage;
-        particle.errorCounter = (particle.errorCounter ?? 0) + 1;
-    });
-};
 
 export const getAsyncDataStatus = (particle?: IAsyncParticle<unknown>) => ({
     hasError: particle?.status === "rejected",

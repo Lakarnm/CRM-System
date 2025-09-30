@@ -10,18 +10,27 @@ import {
 } from "../../api/authApi";
 import { setAccessToken as setApiAccessToken } from "../../api/httpClient";
 
-import { addAsyncBuilderCases, initAsyncParticle } from "../../store/utils";
+import { initAsyncParticle } from "../../store/utils";
 import { authInitialState, type AuthSliceState } from "../../store/initialState";
 
 type ServerError = { message?: string };
 const extractErrorMessage = (error: unknown, fallback: string) => {
+
     if (axios.isAxiosError(error)) {
         const data = error.response?.data;
-        if (typeof data === "string") return data;
-        const msg = (data as ServerError | undefined)?.message;
-        if (msg) return msg;
+
+        if (typeof data === "string") {
+            return data;
+        }
+        const message = (data as ServerError | undefined)?.message;
+
+        if (message) {
+            return message;
+        }
     }
-    if (error instanceof Error && error.message) return error.message;
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
     return fallback;
 };
 
@@ -58,7 +67,9 @@ export const refreshAccess = createAsyncThunk<Token, void, { rejectValue: string
     async (_, { rejectWithValue }) => {
         try {
             const stored = localStorage.getItem("refreshToken");
-            if (!stored) throw new Error("Нет refresh токена");
+            if (!stored) {
+                throw new Error("Нет refresh токена");
+            }
             const payload: RefreshToken = { refreshToken: stored };
             return await apiRefreshToken(payload);
         } catch (error: unknown) {
@@ -161,11 +172,24 @@ const authSlice = createSlice({
         });
 
         // PROFILE
-        addAsyncBuilderCases<AuthSliceState, Profile, void, string>(
-            builder,
-            fetchProfileThunk,
-            (state) => state.profile
-        );
+        builder
+            .addCase(fetchProfileThunk.pending, (state) => {
+                state.profile.status = "pending";
+                state.profile.error = null;
+            })
+            .addCase(fetchProfileThunk.fulfilled, (state, action: PayloadAction<Profile>) => {
+                state.profile.status = "fulfilled";
+                state.profile.error = null;
+                state.profile.errorCounter = 0;
+                state.profile.data = action.payload;
+            })
+            .addCase(fetchProfileThunk.rejected, (state, action) => {
+                state.profile.status = "rejected";
+                const payloadMessage = action.payload as string;
+                const errorMessage = payloadMessage || "Ошибка загрузки профиля";
+                state.profile.error = errorMessage;
+                state.profile.errorCounter = (state.profile.errorCounter ?? 0) + 1;
+            });
 
         // LOGOUT
         builder.addCase(logout.fulfilled, (state) => {

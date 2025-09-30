@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { Button, Form, Input, Typography } from "antd";
+import { Button, Form, Input } from "antd";
 import { useAppDispatch } from "../store/hooks";
 import { register } from "../features/auth/authSlice";
 import { useNavigate, Link } from "react-router-dom";
 import type { UserRegistration } from "../types/types";
 import { App as AntdApp } from "antd";
-
-const { Text } = Typography;
 
 export default function RegisterPage() {
     const dispatch = useAppDispatch();
@@ -14,7 +12,7 @@ export default function RegisterPage() {
     const { message } = AntdApp.useApp();
     const [submitting, setSubmitting] = useState<boolean>(false);
 
-    const onFinish = async (values: {
+    const onFinish = async ({ username, login, password, email, phoneNumber }: {
         username: string;
         login: string;
         password: string;
@@ -23,11 +21,11 @@ export default function RegisterPage() {
         phoneNumber?: string;
     }) => {
         const payload: UserRegistration = {
-            username: values.username.trim(),
-            login: values.login.trim(),
-            password: values.password,
-            email: values.email.trim(),
-            phoneNumber: (values.phoneNumber ?? "").trim(),
+            username: username.trim(),
+            login: login.trim(),
+            password,
+            email: email.trim(),
+            phoneNumber: (phoneNumber ?? "").trim(),
         };
 
         try {
