@@ -3,7 +3,7 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { App as AntdApp } from "antd";
 import { store } from "./store";
-import { useAppDispatch, useAppSelector } from "./store/hooks";
+import { useAppDispatch } from "./store/hooks";
 import { initAuth } from "./features/auth/authSlice";
 
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -19,7 +19,6 @@ import RegisterPage from "./pages/RegisterPage";
 
 function AppContent() {
     const dispatch = useAppDispatch();
-    const isAuthorization = useAppSelector((selector) => selector.auth.isAuthorization);
 
     useEffect(() => {
         dispatch(initAuth());
@@ -27,35 +26,16 @@ function AppContent() {
 
     return (
         <Routes>
-            {/* public */}
+            {/* Public routes */}
             <Route element={<AuthLayout />}>
                 <Route path="/login" element={<LoginPage />} />
+            </Route>
+
+            <Route element={<AuthLayout />}>
                 <Route path="/register" element={<RegisterPage />} />
             </Route>
 
-            <Route
-                element={
-                    <AuthLayout
-                        title="Авторизация"
-                        caption="Войдите, чтобы управлять задачами"
-                    />
-                }
-            >
-                <Route path="/login" element={<LoginPage />} />
-            </Route>
-
-            <Route
-                element={
-                    <AuthLayout
-                        title="Регистрация"
-                        caption="Создайте аккаунт, чтобы управлять задачами"
-                    />
-                }
-            >
-                <Route path="/register" element={<RegisterPage />} />
-            </Route>
-
-            {/* Private */}
+            {/* Private routes */}
             <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                     <Route index element={<TodoListPage />} />

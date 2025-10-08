@@ -1,47 +1,36 @@
-import axios, { AxiosError, AxiosHeaders, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from "axios";
 
 const BASE_URL = "https://easydev.club/api/v1";
 
 class AccessTokenStore {
     private _token: string | null = null;
 
-    get(): string | null {
+    get token(): string | null {
         return this._token;
     }
-    set(value: string | null): void {
+
+    set token(value: string | null) {
+        if (value === null) {
+            throw new Error("Use clear() instead");
+        }
         this._token = value;
     }
+
     clear(): void {
         this._token = null;
     }
 }
 
 export const tokenStore = new AccessTokenStore();
-export const setAccessToken = (value: string | null) => tokenStore.set(value);
 
-/* HEADERS */
-function toAxiosHeaders(
-    headers: AxiosRequestConfig["headers"] | undefined
-): AxiosHeaders {
-    return headers instanceof AxiosHeaders ? headers : new AxiosHeaders(headers);
-}
-
-function withAuthHeader(
-    headers: AxiosRequestConfig["headers"] | undefined,
-    accessToken: string
-): AxiosHeaders {
-    const normalized = toAxiosHeaders(headers);
-    normalized.set("Authorization", `Bearer ${accessToken}`);
-    return normalized;
-}
 
 /* AXIOS */
 export const http: AxiosInstance = axios.create({ baseURL: BASE_URL });
 
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    const accessToken = tokenStore.get();
+    const accessToken = tokenStore.token;
     if (accessToken) {
-        config.headers = withAuthHeader(config.headers, accessToken);
+        config.headers.set('Authorization', `Bearer ${accessToken}`);
     }
     return config;
 });
@@ -90,7 +79,7 @@ http.interceptors.response.use(
                         refreshToken: storedRefresh,
                     });
 
-                    tokenStore.set(data.accessToken);
+                    tokenStore.token = data.accessToken;
                     localStorage.setItem("refreshToken", data.refreshToken);
                     isRefreshing = false;
                     notifyRefreshSubscribers(data.accessToken);
@@ -106,10 +95,10 @@ http.interceptors.response.use(
             return new Promise((resolve, reject) => {
                 subscribeRefresh((newAccessToken) => {
                     if (newAccessToken) {
-                        originalRequest.headers = withAuthHeader(
-                            originalRequest.headers,
-                            newAccessToken
-                        );
+                        originalRequest.headers = {
+                            ...originalRequest.headers,
+                            Authorization: `Bearer ${newAccessToken}`
+                        };
                         resolve(http(originalRequest));
                     } else {
                         reject(error);

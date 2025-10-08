@@ -9,6 +9,10 @@ interface Props {
     todoInfo: TodoInfo;
 }
 
+const isFilterStatus = (key: string): key is FilterStatus => {
+    return key === "all" || key === "inWork" || key === "completed";
+};
+
 const TodoTabs = ({ selectedTab, onSelectTab, todoInfo }: Props) => {
     const items: TabsProps["items"] = useMemo(
         () => [
@@ -19,11 +23,19 @@ const TodoTabs = ({ selectedTab, onSelectTab, todoInfo }: Props) => {
         [todoInfo]
     );
 
+    const handleTabChange = (key: string) => {
+        if (isFilterStatus(key)) {
+            onSelectTab(key);
+    } else {
+        console.warn(`Invalid tab key: ${key}`);
+    }
+    };
+
     return (
         <Tabs
             className="todo-tabs"
             activeKey={selectedTab}
-            onChange={(key) => onSelectTab(key as FilterStatus)}
+            onChange={handleTabChange}
             items={items}
             centered
             animated

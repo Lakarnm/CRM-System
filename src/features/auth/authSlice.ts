@@ -8,7 +8,7 @@ import {
     getProfile as apiGetProfile,
     logoutUser as apiLogoutUser,
 } from "../../api/authApi";
-import { setAccessToken as setApiAccessToken } from "../../api/httpClient";
+import { tokenStore } from "../../api/httpClient";
 
 import { initAsyncParticle } from "../../store/utils";
 import { authInitialState, type AuthSliceState } from "../../store/initialState";
@@ -112,10 +112,10 @@ export const initAuth = createAsyncThunk("auth/initAuth", async (_, { dispatch }
     }
     try {
         const tokens = await dispatch(refreshAccess()).unwrap();
-        setApiAccessToken(tokens.accessToken);
+        tokenStore.token = tokens.accessToken;
         await dispatch(fetchProfileThunk());
     } catch {
-        setApiAccessToken(null);
+        tokenStore.clear();
     } finally {
         dispatch(setReady(true));
     }
@@ -145,7 +145,7 @@ const authSlice = createSlice({
             state.accessToken = action.payload.accessToken;
             state.refreshToken = action.payload.refreshToken;
             state.isAuthorization = true;
-            setApiAccessToken(action.payload.accessToken);
+            tokenStore.token = action.payload.accessToken;
             state.error = null;
         });
         builder.addCase(login.rejected, (state, action) => {
@@ -159,7 +159,7 @@ const authSlice = createSlice({
             state.refreshToken = action.payload.refreshToken;
             state.isAuthorization = true;
             localStorage.setItem("refreshToken", action.payload.refreshToken);
-            setApiAccessToken(action.payload.accessToken);
+            tokenStore.token = action.payload.accessToken;
             state.error = null;
         });
         builder.addCase(refreshAccess.rejected, (state) => {
@@ -168,7 +168,7 @@ const authSlice = createSlice({
             state.refreshToken = null;
             state.isAuthorization = false;
             localStorage.removeItem("refreshToken");
-            setApiAccessToken(null);
+            tokenStore.clear();
         });
 
         // PROFILE
@@ -197,7 +197,7 @@ const authSlice = createSlice({
             state.accessToken = null;
             state.refreshToken = null;
             state.isAuthorization = false;
-            setApiAccessToken(null);
+            tokenStore.clear();
         });
     },
 });

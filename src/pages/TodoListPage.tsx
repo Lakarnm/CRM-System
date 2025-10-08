@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Button, Form, Input, App as AntdApp } from "antd";
 import TodoList from "../components/TodoList/TodoList";
-import TodoTabs from "../components/Tabs/Tabs";
+import TodoTabs from "../components/Tabs/TodoTabs.js";
 import { fetchTodos, createTodo } from "../api/todosApi";
 import { Todo, FilterStatus, TodoInfo, TodoRequest } from "../types/types";
 

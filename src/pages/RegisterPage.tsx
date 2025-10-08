@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Button, Form, Input } from "antd";
+import { Button, Form, Input, Typography } from "antd";
 import { useAppDispatch } from "../store/hooks";
 import { register } from "../features/auth/authSlice";
 import { useNavigate, Link } from "react-router-dom";
 import type { UserRegistration } from "../types/types";
 import { App as AntdApp } from "antd";
+
+const { Title } = Typography;
 
 export default function RegisterPage() {
     const dispatch = useAppDispatch();
@@ -12,20 +14,13 @@ export default function RegisterPage() {
     const { message } = AntdApp.useApp();
     const [submitting, setSubmitting] = useState<boolean>(false);
 
-    const onFinish = async ({ username, login, password, email, phoneNumber }: {
-        username: string;
-        login: string;
-        password: string;
-        confirmPassword: string;
-        email: string;
-        phoneNumber?: string;
-    }) => {
+    const onFinish = async (values: UserRegistration & { confirmPassword: string }) => {
         const payload: UserRegistration = {
-            username: username.trim(),
-            login: login.trim(),
-            password,
-            email: email.trim(),
-            phoneNumber: (phoneNumber ?? "").trim(),
+            username: values.username.trim(),
+            login: values.login.trim(),
+            password: values.password.trim(),
+            email: values.email.trim(),
+            phoneNumber: (values.phoneNumber ?? "").trim(),
         };
 
         try {
@@ -46,6 +41,9 @@ export default function RegisterPage() {
 
     return (
         <>
+            <Title level={3} style={{ marginBottom: 16 }}>
+                Регистрация
+            </Title>
             <Form layout="vertical" onFinish={onFinish}>
                 <Form.Item
                     name="username"
