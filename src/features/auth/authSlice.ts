@@ -128,8 +128,10 @@ export const initAuth = createAsyncThunk("auth/initAuth", async (_, { dispatch, 
         if (state.auth.profile.data?.isBlocked) {
             dispatch(logout());
         }
-    } catch {
-        tokenStore.clear();
+    } catch (error: any) {
+        if (error.response?.status !== 429 && error.response?.status !== 304) {
+            tokenStore.clear();
+        }
     } finally {
         dispatch(setReady(true));
     }

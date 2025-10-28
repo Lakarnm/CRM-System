@@ -43,13 +43,26 @@ export default function UserProfilePage() {
     };
 
     const handleSave = async (values: UserRequest) => {
-        if (!id) return;
+        if (!id || !selectedUser) return;
 
         try {
             setUpdating(true);
+
+            const { username, email, phoneNumber } = values;
+            const changedData: UserRequest = {};
+
+            if (username !== selectedUser.username) changedData.username = username;
+            if (email !== selectedUser.email) changedData.email = email;
+            if (phoneNumber !== selectedUser.phoneNumber) changedData.phoneNumber = phoneNumber;
+
+            if (Object.keys(changedData).length === 0) {
+                setIsEditing(false);
+                return;
+            }
+
             await dispatch(updateUserData({
                 id: parseInt(id),
-                data: values
+                data: changedData
             })).unwrap();
 
             message.success("Данные пользователя обновлены");
