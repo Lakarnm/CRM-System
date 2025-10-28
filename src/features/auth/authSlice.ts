@@ -15,7 +15,6 @@ import { authInitialState, type AuthSliceState } from "../../store/initialState"
 
 type ServerError = { message?: string };
 const extractErrorMessage = (error: unknown, fallback: string) => {
-
     if (axios.isAxiosError(error)) {
         const data = error.response?.data;
 
@@ -50,10 +49,20 @@ export const register = createAsyncThunk<Profile, UserRegistration, { rejectValu
 
 export const login = createAsyncThunk<Token, AuthData, { rejectValue: string }>(
     "auth/login",
-    async (payload, { rejectWithValue }) => {
+    async (payload, { dispatch, rejectWithValue }) => {
         try {
             const tokens = await loginUser(payload);
             localStorage.setItem("refreshToken", tokens.refreshToken);
+            tokenStore.token = tokens.accessToken;
+
+            const profile = await dispatch(fetchProfileThunk()).unwrap();
+
+            if (profile.isBlocked) {
+                localStorage.removeItem("refreshToken");
+                tokenStore.clear();
+                throw new Error("Пользователь заблокирован");
+            }
+
             return tokens;
         } catch (error: unknown) {
             const message = extractErrorMessage(error, "Неверные логин или пароль");
@@ -104,7 +113,7 @@ export const logout = createAsyncThunk<void, void, { rejectValue: string }>(
     }
 );
 
-export const initAuth = createAsyncThunk("auth/initAuth", async (_, { dispatch }) => {
+export const initAuth = createAsyncThunk("auth/initAuth", async (_, { dispatch, getState }) => {
     const hasRefresh = !!localStorage.getItem("refreshToken");
     if (!hasRefresh) {
         dispatch(setReady(true));
@@ -113,7 +122,12 @@ export const initAuth = createAsyncThunk("auth/initAuth", async (_, { dispatch }
     try {
         const tokens = await dispatch(refreshAccess()).unwrap();
         tokenStore.token = tokens.accessToken;
-        await dispatch(fetchProfileThunk());
+        await dispatch(fetchProfileThunk()).unwrap();
+
+        const state = getState() as { auth: AuthSliceState };
+        if (state.auth.profile.data?.isBlocked) {
+            dispatch(logout());
+        }
     } catch {
         tokenStore.clear();
     } finally {
@@ -182,6 +196,14 @@ const authSlice = createSlice({
                 state.profile.error = null;
                 state.profile.errorCounter = 0;
                 state.profile.data = action.payload;
+
+                if (action.payload.isBlocked) {
+                    state.isAuthorization = false;
+                    state.accessToken = null;
+                    state.refreshToken = null;
+                    tokenStore.clear();
+                    localStorage.removeItem("refreshToken");
+                }
             })
             .addCase(fetchProfileThunk.rejected, (state, action) => {
                 state.profile.status = "rejected";

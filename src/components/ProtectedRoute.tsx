@@ -5,6 +5,7 @@ import { useAppSelector } from "../store/hooks";
 export default function ProtectedRoute() {
     const isReady = useAppSelector((selector) => selector.auth.isReady);
     const isAuthorization = useAppSelector((selector) => selector.auth.isAuthorization);
+    const profile = useAppSelector((selector) => selector.auth.profile.data);
 
     if (!isReady) {
         return (
@@ -12,6 +13,10 @@ export default function ProtectedRoute() {
                 <Spin />
             </div>
         );
+    }
+
+    if (profile?.isBlocked) {
+        return <Navigate to="/login" replace />;
     }
 
     return isAuthorization ? <Outlet /> : <Navigate to="/login" replace />;
