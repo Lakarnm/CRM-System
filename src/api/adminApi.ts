@@ -1,11 +1,12 @@
 import { http } from "./httpClient";
 import { User, UserFilters, UsersMetaResponse, UserRolesRequest, UserRequest } from "../types/types";
+import { AxiosError} from "axios";
 
 const TOO_MANY_REQUESTS_STATUS = 429;
 const RETRY_DELAY_MS = 2000;
 
 export async function fetchUsers(filters: UserFilters): Promise<UsersMetaResponse> {
-    const apiParams: any = { ...filters };
+    const apiParams: Record<string, string | number | boolean | undefined> = { ...filters };
 
     Object.keys(apiParams).forEach(key => {
         const value = apiParams[key];
@@ -19,8 +20,8 @@ export async function fetchUsers(filters: UserFilters): Promise<UsersMetaRespons
             params: apiParams
         });
         return data;
-    } catch (error: any) {
-        if (error.response?.status === TOO_MANY_REQUESTS_STATUS) {
+    } catch (error: unknown) {
+        if (error instanceof AxiosError && error.response?.status === TOO_MANY_REQUESTS_STATUS) {
             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
             throw new Error('Слишком много запросов. Подождите немного.');
         }

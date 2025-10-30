@@ -67,8 +67,8 @@ export default function UserProfilePage() {
 
             message.success("Данные пользователя обновлены");
             setIsEditing(false);
-        } catch (error: any) {
-            message.error(error || "Ошибка при обновлении данных");
+        } catch (error: unknown) {
+            message.error(error instanceof Error ? error.message : "Ошибка при обновлении данных");
         } finally {
             setUpdating(false);
         }

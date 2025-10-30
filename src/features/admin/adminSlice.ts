@@ -1,7 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { User, UserFilters, UsersMetaResponse, UserRolesRequest, UserRequest, Roles } from "../../types/types";
+import { User, UserFilters, UsersMetaResponse, UserRequest, Roles } from "../../types/types";
 import { fetchUsers, fetchUserById, updateUserRoles, updateUser, blockUser, unblockUser, deleteUser } from "../../api/adminApi";
 import { logout } from "../auth/authSlice";
+import { AxiosError } from "axios";
 
 interface AdminState {
     users: User[];
@@ -35,6 +36,17 @@ const initialState: AdminState = {
     }
 };
 
+/* ERRORS */
+const extractErrorMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof AxiosError) {
+        return error.response?.data?.message || error.message || fallback;
+    }
+    if (error instanceof Error) {
+        return error.message;
+    }
+    return fallback;
+};
+
 /* ASYNC THUNKS */
 
 export const getUsers = createAsyncThunk<
@@ -48,8 +60,9 @@ export const getUsers = createAsyncThunk<
             const state = getState() as { admin: AdminState };
             const filters = state.admin.filters;
             return await fetchUsers(filters);
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data?.message || "Ошибка загрузки пользователей");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Ошибка загрузки пользователей");
+            return rejectWithValue(message);
         }
     }
 );
@@ -63,8 +76,9 @@ export const getUserById = createAsyncThunk<
     async (id, { rejectWithValue }) => {
         try {
             return await fetchUserById(id);
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data?.message || "Ошибка загрузки пользователя");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Ошибка загрузки пользователя");
+            return rejectWithValue(message);
         }
     }
 );
@@ -78,8 +92,9 @@ export const updateUserData = createAsyncThunk<
     async ({ id, data }, { rejectWithValue }) => {
         try {
             return await updateUser(id, data);
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data?.message || "Ошибка обновления пользователя");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Ошибка обновления пользователя");
+            return rejectWithValue(message);
         }
     }
 );
@@ -100,8 +115,9 @@ export const toggleBlockUser = createAsyncThunk<
             } else {
                 return await blockUser(id);
             }
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data?.message || "Ошибка изменения статуса блокировки");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Ошибка изменения статуса блокировки");
+            return rejectWithValue(message);
         }
     }
 );
@@ -116,8 +132,9 @@ export const removeUser = createAsyncThunk<
         try {
             await deleteUser(id);
             return id;
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data?.message || "Ошибка удаления пользователя");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Ошибка удаления пользователя");
+            return rejectWithValue(message);
         }
     }
 );
@@ -131,8 +148,9 @@ export const updateUserRights = createAsyncThunk<
     async ({ id, roles }, { rejectWithValue }) => {
         try {
             return await updateUserRoles(id, { roles });
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data?.message || "Ошибка обновления прав");
+        } catch (error: unknown) {
+            const message = extractErrorMessage(error, "Ошибка обновления прав");
+            return rejectWithValue(message);
         }
     }
 );
@@ -160,7 +178,7 @@ const adminSlice = createSlice({
         },
         setPagination: (state, action: PayloadAction<{ current: number; pageSize: number }>) => {
             state.pagination = { ...state.pagination, ...action.payload };
-            state.filters.page = action.payload.current - 1; // Конвертируем 1-based в 0-based
+            state.filters.page = action.payload.current - 1;
             state.filters.limit = action.payload.pageSize;
         }
     },
@@ -236,5 +254,5 @@ const adminSlice = createSlice({
     }
 });
 
-export const { setFilters, clearError, clearSelectedUser, setPagination } = adminSlice.actions;
+export const { setFilters, clearSelectedUser, setPagination } = adminSlice.actions;
 export default adminSlice.reducer;

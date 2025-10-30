@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { Spin } from "antd";
 import { useAppSelector } from "../store/hooks";
+import { hasAdminOrModeratorRole } from "../utils/roleUtils";
 
 export default function AdminRoute() {
     const { isReady, profile } = useAppSelector((state) => state.auth);
@@ -18,8 +19,7 @@ export default function AdminRoute() {
         return <Navigate to="/login" replace />;
     }
 
-    const userRoles = profile.data?.roles || [];
-    const hasAccess = userRoles.includes('ADMIN') || userRoles.includes('MODERATOR');
+    const hasAccess = hasAdminOrModeratorRole(profile.data?.roles);
 
     return hasAccess ? <Outlet /> : <Navigate to="/" replace />;
 }

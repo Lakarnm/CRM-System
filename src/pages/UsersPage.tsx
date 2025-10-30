@@ -9,6 +9,9 @@ import { getUsers, toggleBlockUser, removeUser, updateUserRights,
 import { User, Roles } from "../types/types";
 import { useNavigate } from "react-router-dom";
 import RoleManagementModal from "../components/RoleManagementModal";
+import { TablePaginationConfig, TableProps } from "antd/es/table";
+import { SorterResult } from "antd/es/table/interface";
+import type { FilterValue } from "antd/es/table/interface";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -64,17 +67,21 @@ export default function UsersPage() {
         dispatch(setFilters({ isBlocked }));
     };
 
-    const handleTableChange = (pagination: any, filters: any, sorter: any) => {
-
+    const handleTableChange: TableProps<User>['onChange'] = (
+        pagination: TablePaginationConfig,
+        filters: Record<string, FilterValue | null>,
+        sorter: SorterResult<User> | SorterResult<User>[]
+    ) => {
         dispatch(setPagination({
-            current: pagination.current,
-            pageSize: pagination.pageSize
+            current: pagination.current || 1,
+            pageSize: pagination.pageSize || 10
         }));
 
-        if (sorter.field) {
+        const singleSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+        if (singleSorter.field) {
             dispatch(setFilters({
-                sortBy: sorter.field,
-                sortOrder: sorter.order === "ascend" ? "asc" : "desc"
+                sortBy: singleSorter.field as string,
+                sortOrder: singleSorter.order === "ascend" ? "asc" : "desc"
             }));
         }
     };
@@ -91,7 +98,7 @@ export default function UsersPage() {
         try {
             await dispatch(toggleBlockUser(user.id)).unwrap();
             message.success(`Пользователь ${user.isBlocked ? 'разблокирован' : 'заблокирован'}`);
-        } catch (error) {
+        } catch (error: unknown) {
             message.error("Ошибка при изменении статуса блокировки");
         }
     };
@@ -100,7 +107,7 @@ export default function UsersPage() {
         try {
             await dispatch(removeUser(userId)).unwrap();
             message.success("Пользователь удален");
-        } catch (error) {
+        } catch (error: unknown) {
             message.error("Ошибка при удалении пользователя");
         }
     };
@@ -121,12 +128,12 @@ export default function UsersPage() {
             message.success("Роли пользователя обновлены");
             setRoleModalVisible(false);
             setSelectedUser(null);
-        } catch (error) {
+        } catch (error: unknown) {
             message.error("Ошибка при обновлении ролей");
         }
     };
 
-    const columns = [
+    const columns: TableProps<User>['columns'] = [
         {
             title: 'Имя пользователя',
             dataIndex: 'username',
@@ -192,7 +199,7 @@ export default function UsersPage() {
             key: 'actions',
             width: 200,
             fixed: 'right' as const,
-            render: (_: any, user: User) => (
+            render: (_, user: User) => (
                 <Space size="small">
                     <Tooltip title="Перейти к профилю">
                         <Button
