@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, Form, Input, Button, Space, message, Spin, Typography, Tag, Descriptions } from "antd";
 import { ArrowLeftOutlined, EditOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { getUserById, updateUserData, clearSelectedUser } from "../features/admin/adminSlice";
 import { UserRequest, Roles } from "../types/types";
+import { getChangedFields } from "../utils/objectUtils";
 
 const { Title, Text } = Typography;
 
@@ -15,8 +16,8 @@ export default function UserProfilePage() {
     const { selectedUser, loading } = useAppSelector((state) => state.admin);
 
     const [form] = Form.useForm();
-    const [isEditing, setIsEditing] = useState(false);
-    const [updating, setUpdating] = useState(false);
+    const [isEditing, setIsEditing] = useState<boolean>(false);
+    const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
     useEffect(() => {
         if (id) {
@@ -28,7 +29,7 @@ export default function UserProfilePage() {
         };
     }, [id, dispatch]);
 
-    useEffect(() => {
+    const setFormValues = useCallback(() => {
         if (selectedUser) {
             form.setFieldsValue({
                 username: selectedUser.username,
@@ -38,6 +39,10 @@ export default function UserProfilePage() {
         }
     }, [selectedUser, form]);
 
+    useEffect(() => {
+        setFormValues();
+    }, [setFormValues]);
+
     const handleEdit = () => {
         setIsEditing(true);
     };
@@ -46,14 +51,8 @@ export default function UserProfilePage() {
         if (!id || !selectedUser) return;
 
         try {
-            setUpdating(true);
-
-            const { username, email, phoneNumber } = values;
-            const changedData: UserRequest = {};
-
-            if (username !== selectedUser.username) changedData.username = username;
-            if (email !== selectedUser.email) changedData.email = email;
-            if (phoneNumber !== selectedUser.phoneNumber) changedData.phoneNumber = phoneNumber;
+            setIsUpdating(true);
+            const changedData = getChangedFields(selectedUser, values);
 
             if (Object.keys(changedData).length === 0) {
                 setIsEditing(false);
@@ -70,18 +69,12 @@ export default function UserProfilePage() {
         } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : "Ошибка при обновлении данных");
         } finally {
-            setUpdating(false);
+            setIsUpdating(false);
         }
     };
 
     const handleCancel = () => {
-        if (selectedUser) {
-            form.setFieldsValue({
-                username: selectedUser.username,
-                email: selectedUser.email,
-                phoneNumber: selectedUser.phoneNumber || ""
-            });
-        }
+        setFormValues();
         setIsEditing(false);
     };
 
@@ -143,7 +136,7 @@ export default function UserProfilePage() {
                                         type="primary"
                                         icon={<SaveOutlined />}
                                         onClick={() => form.submit()}
-                                        loading={updating}
+                                        loading={isUpdating}
                                     >
                                         Сохранить
                                     </Button>
@@ -161,7 +154,7 @@ export default function UserProfilePage() {
                             form={form}
                             layout="vertical"
                             onFinish={handleSave}
-                            disabled={!isEditing || updating}
+                            disabled={!isEditing || isUpdating}
                         >
                             <Form.Item
                                 name="username"

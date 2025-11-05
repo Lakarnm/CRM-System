@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 
 const { Text, Title } = Typography;
 
-interface RoleManagementModalProps {
+interface Props {
     visible: boolean;
     user: User | null;
     onCancel: () => void;
@@ -23,7 +23,7 @@ const ROLE_COLORS = {
     [Roles.ADMIN]: "red"
 };
 
-export default function RoleManagementModal({ visible, user, onCancel, onSave }: RoleManagementModalProps) {
+export default function RoleManagementModal({ visible, user, onCancel, onSave }: Props) {
     const [selectedRoles, setSelectedRoles] = useState<Roles[]>([]);
 
     useEffect(() => {

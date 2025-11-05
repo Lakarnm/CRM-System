@@ -30,9 +30,9 @@ export default function UsersPage() {
         return () => clearTimeout(timer);
     }, [dispatch, filters]);
 
-    const [roleModalVisible, setRoleModalVisible] = useState(false);
+    const [isRoleModalVisible, setIsRoleModalVisible] = useState<boolean>(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [searchValue, setSearchValue] = useState("");
+    const [searchValue, setSearchValue] = useState<string>("");
 
     useEffect(() => {
         if (error) {
@@ -114,7 +114,7 @@ export default function UsersPage() {
 
     const handleRoleManagement = (user: User) => {
         setSelectedUser(user);
-        setRoleModalVisible(true);
+        setIsRoleModalVisible(true);
     };
 
     const handleRoleUpdate = async (roles: Roles[]) => {
@@ -126,7 +126,7 @@ export default function UsersPage() {
                 roles
             })).unwrap();
             message.success("Роли пользователя обновлены");
-            setRoleModalVisible(false);
+            setIsRoleModalVisible(false);
             setSelectedUser(null);
         } catch (error: unknown) {
             message.error("Ошибка при обновлении ролей");
@@ -387,10 +387,10 @@ export default function UsersPage() {
                 </Card>
 
                 <RoleManagementModal
-                    visible={roleModalVisible}
+                    visible={isRoleModalVisible}
                     user={selectedUser}
                     onCancel={() => {
-                        setRoleModalVisible(false);
+                        setIsRoleModalVisible(false);
                         setSelectedUser(null);
                     }}
                     onSave={handleRoleUpdate}

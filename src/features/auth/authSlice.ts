@@ -160,12 +160,12 @@ const authSlice = createSlice({
         builder.addCase(login.fulfilled, (state, action: PayloadAction<Token>) => {
             state.accessToken = action.payload.accessToken;
             state.refreshToken = action.payload.refreshToken;
-            state.isAuthorization = true;
+            state.isAuthorized = true;
             tokenStore.token = action.payload.accessToken;
             state.error = null;
         });
         builder.addCase(login.rejected, (state, action) => {
-            state.isAuthorization = false;
+            state.isAuthorized = false;
             state.error = (action.payload as string) || "Ошибка входа";
         });
 
@@ -173,7 +173,7 @@ const authSlice = createSlice({
         builder.addCase(refreshAccess.fulfilled, (state, action: PayloadAction<Token>) => {
             state.accessToken = action.payload.accessToken;
             state.refreshToken = action.payload.refreshToken;
-            state.isAuthorization = true;
+            state.isAuthorized = true;
             localStorage.setItem("refreshToken", action.payload.refreshToken);
             tokenStore.token = action.payload.accessToken;
             state.error = null;
@@ -182,7 +182,7 @@ const authSlice = createSlice({
             state.profile = initAsyncParticle<Profile>(null);
             state.accessToken = null;
             state.refreshToken = null;
-            state.isAuthorization = false;
+            state.isAuthorized = false;
             localStorage.removeItem("refreshToken");
             tokenStore.clear();
         });
@@ -200,7 +200,7 @@ const authSlice = createSlice({
                 state.profile.data = action.payload;
 
                 if (action.payload.isBlocked) {
-                    state.isAuthorization = false;
+                    state.isAuthorized = false;
                     state.accessToken = null;
                     state.refreshToken = null;
                     tokenStore.clear();
@@ -220,7 +220,7 @@ const authSlice = createSlice({
             state.profile = initAsyncParticle<Profile>(null);
             state.accessToken = null;
             state.refreshToken = null;
-            state.isAuthorization = false;
+            state.isAuthorized = false;
             tokenStore.clear();
         });
     },

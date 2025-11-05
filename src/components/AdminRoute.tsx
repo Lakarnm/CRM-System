@@ -1,11 +1,12 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { Spin } from "antd";
 import { useAppSelector } from "../store/hooks";
-import { hasAdminOrModeratorRole } from "../utils/roleUtils";
+import { hasRole } from "../utils/roleUtils";
+import { Roles } from "../types/types";
 
 export default function AdminRoute() {
     const { isReady, profile } = useAppSelector((state) => state.auth);
-    const isAuthorization = useAppSelector((state) => state.auth.isAuthorization);
+    const isAuthorized = useAppSelector((state) => state.auth.isAuthorized);
 
     if (!isReady) {
         return (
@@ -15,11 +16,11 @@ export default function AdminRoute() {
         );
     }
 
-    if (!isAuthorization) {
+    if (!isAuthorized) {
         return <Navigate to="/login" replace />;
     }
 
-    const hasAccess = hasAdminOrModeratorRole(profile.data?.roles);
+    const hasAccess = hasRole(profile.data?.roles, [Roles.ADMIN, Roles.MODERATOR]);
 
     return hasAccess ? <Outlet /> : <Navigate to="/" replace />;
 }

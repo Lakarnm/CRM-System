@@ -7,7 +7,7 @@ export type AuthSliceState = {
     refreshToken: string | null;
     error: string | null;
     isReady: boolean;
-    isAuthorization: boolean;
+    isAuthorized: boolean;
 };
 
 export const authInitialState: AuthSliceState = {
@@ -16,5 +16,5 @@ export const authInitialState: AuthSliceState = {
     refreshToken: null,
     error: null,
     isReady: false,
-    isAuthorization: false,
+    isAuthorized: false,
 };

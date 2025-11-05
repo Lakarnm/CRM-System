@@ -4,7 +4,7 @@ import { useAppSelector } from "../store/hooks";
 
 export default function ProtectedRoute() {
     const isReady = useAppSelector((selector) => selector.auth.isReady);
-    const isAuthorization = useAppSelector((selector) => selector.auth.isAuthorization);
+    const isAuthorized = useAppSelector((selector) => selector.auth.isAuthorized);
     const profile = useAppSelector((selector) => selector.auth.profile.data);
 
     if (!isReady) {
@@ -19,5 +19,5 @@ export default function ProtectedRoute() {
         return <Navigate to="/login" replace />;
     }
 
-    return isAuthorization ? <Outlet /> : <Navigate to="/login" replace />;
+    return isAuthorized ? <Outlet /> : <Navigate to="/login" replace />;
 }

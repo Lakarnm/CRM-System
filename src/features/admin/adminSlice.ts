@@ -47,6 +47,25 @@ const extractErrorMessage = (error: unknown, fallback: string): string => {
     return fallback;
 };
 
+/* ADDITIONAL FUNCTIONS TO UPDATE STATES */
+const updateUserInList = (state: AdminState, updatedUser: User): void => {
+    const index = state.users.findIndex(user => user.id === updatedUser.id);
+    if (index !== -1) {
+        state.users[index] = updatedUser;
+    }
+};
+
+const updateSelectedUser = (state: AdminState, updatedUser: User): void => {
+    if (state.selectedUser?.id === updatedUser.id) {
+        state.selectedUser = updatedUser;
+    }
+};
+
+const updateUserInState = (state: AdminState, updatedUser: User): void => {
+    updateUserInList(state, updatedUser);
+    updateSelectedUser(state, updatedUser);
+};
+
 /* ASYNC THUNKS */
 
 export const getUsers = createAsyncThunk<
@@ -214,22 +233,13 @@ const adminSlice = createSlice({
         /* UPDATE USER DATA */
         builder
             .addCase(updateUserData.fulfilled, (state, action) => {
-                const index = state.users.findIndex(user => user.id === action.payload.id);
-                if (index !== -1) {
-                    state.users[index] = action.payload;
-                }
-                if (state.selectedUser?.id === action.payload.id) {
-                    state.selectedUser = action.payload;
-                }
+                updateUserInState(state, action.payload);
             });
 
         /* TOGGLE BLOCK USER */
         builder
             .addCase(toggleBlockUser.fulfilled, (state, action) => {
-                const index = state.users.findIndex(user => user.id === action.payload.id);
-                if (index !== -1) {
-                    state.users[index] = action.payload;
-                }
+                updateUserInList(state, action.payload);
             });
 
         /* REMOVE USER */
@@ -241,10 +251,7 @@ const adminSlice = createSlice({
         /* UPDATE USER RIGHTS */
         builder
             .addCase(updateUserRights.fulfilled, (state, action) => {
-                const index = state.users.findIndex(user => user.id === action.payload.id);
-                if (index !== -1) {
-                    state.users[index] = action.payload;
-                }
+                updateUserInList(state, action.payload);
             });
 
         /* LOGOUT */
@@ -254,5 +261,5 @@ const adminSlice = createSlice({
     }
 });
 
-export const { setFilters, clearSelectedUser, setPagination } = adminSlice.actions;
+export const { setFilters, clearError, clearSelectedUser, setPagination } = adminSlice.actions;
 export default adminSlice.reducer;

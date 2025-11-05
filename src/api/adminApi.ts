@@ -6,18 +6,9 @@ const TOO_MANY_REQUESTS_STATUS = 429;
 const RETRY_DELAY_MS = 2000;
 
 export async function fetchUsers(filters: UserFilters): Promise<UsersMetaResponse> {
-    const apiParams: Record<string, string | number | boolean | undefined> = { ...filters };
-
-    Object.keys(apiParams).forEach(key => {
-        const value = apiParams[key];
-        if (value === undefined || value === "" || value === null) {
-            delete apiParams[key];
-        }
-    });
-
     try {
         const { data } = await http.get<UsersMetaResponse>("/admin/users", {
-            params: apiParams
+            params: filters
         });
         return data;
     } catch (error: unknown) {
