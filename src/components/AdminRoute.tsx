@@ -5,8 +5,7 @@ import { hasRole } from "../utils/roleUtils";
 import { Roles } from "../types/types";
 
 export default function AdminRoute() {
-    const { isReady, profile } = useAppSelector((state) => state.auth);
-    const isAuthorized = useAppSelector((state) => state.auth.isAuthorized);
+    const { isReady, profile, isAuthorized } = useAppSelector((state) => state.auth);
 
     if (!isReady) {
         return (

@@ -14,7 +14,7 @@ export async function fetchUsers(filters: UserFilters): Promise<UsersMetaRespons
     } catch (error: unknown) {
         if (error instanceof AxiosError && error.response?.status === TOO_MANY_REQUESTS_STATUS) {
             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
-            throw new Error('Слишком много запросов. Подождите немного.');
+            return fetchUsers(filters);
         }
         throw error;
     }
