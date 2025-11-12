@@ -1,6 +1,6 @@
-import axios from "axios";
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import type { AuthData, UserRegistration, Token, RefreshToken, Profile } from "../../types/types";
+import { Roles } from "../../types/types";
 import {
     loginUser,
     registerUser,
@@ -9,32 +9,11 @@ import {
     logoutUser as apiLogoutUser,
 } from "../../api/authApi";
 import { tokenStore } from "../../api/httpClient";
-
+import { extractErrorMessage } from "../../utils/errorUtils";
 import { initAsyncParticle } from "../../store/utils";
 import { authInitialState, type AuthSliceState } from "../../store/initialState";
 
-type ServerError = { message?: string };
-const extractErrorMessage = (error: unknown, fallback: string) => {
-    if (axios.isAxiosError(error)) {
-        const data = error.response?.data;
-
-        if (typeof data === "string") {
-            return data;
-        }
-        const message = (data as ServerError | undefined)?.message;
-
-        if (message) {
-            return message;
-        }
-    }
-    if (error instanceof Error && error.message) {
-        return error.message;
-    }
-    return fallback;
-};
-
 /* THUNKS */
-
 export const register = createAsyncThunk<Profile, UserRegistration, { rejectValue: string }>(
     "auth/register",
     async (payload, { rejectWithValue }) => {
@@ -129,7 +108,9 @@ export const initAuth = createAsyncThunk("auth/initAuth", async (_, { dispatch, 
             dispatch(logout());
         }
     } catch (error: unknown) {
-        if (axios.isAxiosError(error) && error.response?.status !== 429 && error.response?.status !== 304) {
+        if (error instanceof Error && 'response' in error &&
+            (error as any).response?.status !== 429 &&
+            (error as any).response?.status !== 304) {
             tokenStore.clear();
         }
     } finally {
@@ -138,7 +119,6 @@ export const initAuth = createAsyncThunk("auth/initAuth", async (_, { dispatch, 
 });
 
 /* SLICE */
-
 const authSlice = createSlice({
     name: "auth",
     initialState: authInitialState as AuthSliceState,
@@ -225,6 +205,24 @@ const authSlice = createSlice({
         });
     },
 });
+
+/* SELECTORS */
+export const selectAuth = (state: { auth: AuthSliceState }) => state.auth;
+export const selectProfile = (state: { auth: AuthSliceState }) => state.auth.profile.data;
+export const selectIsAuthorized = (state: { auth: AuthSliceState }) => state.auth.isAuthorized;
+export const selectIsReady = (state: { auth: AuthSliceState }) => state.auth.isReady;
+
+// UNIVERSAL SELECTOR
+export const selectHasRole = (requiredRoles: Roles[]) => (state: { auth: AuthSliceState }) => {
+    const userRoles = state.auth.profile.data?.roles;
+    if (!userRoles) {
+        return false;
+    }
+    return requiredRoles.some(role => userRoles.includes(role));
+};
+
+// COMMON CASES
+export const selectHasAdminOrModeratorRole = selectHasRole([Roles.ADMIN, Roles.MODERATOR]);
 
 export const { clearError, setReady } = authSlice.actions;
 export default authSlice.reducer;

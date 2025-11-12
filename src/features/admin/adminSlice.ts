@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { User, UserFilters, UsersMetaResponse, UserRequest, Roles } from "../../types/types";
 import { fetchUsers, fetchUserById, updateUserRoles, updateUser, blockUser, unblockUser, deleteUser } from "../../api/adminApi";
 import { logout } from "../auth/authSlice";
-import { AxiosError } from "axios";
+import { extractErrorMessage } from "../../utils/errorUtils";
 
 interface AdminState {
     users: User[];
@@ -36,16 +36,6 @@ const initialState: AdminState = {
     }
 };
 
-/* ERRORS */
-const extractErrorMessage = (error: unknown, fallback: string): string => {
-    if (error instanceof AxiosError) {
-        return error.response?.data?.message || error.message || fallback;
-    }
-    if (error instanceof Error) {
-        return error.message;
-    }
-    return fallback;
-};
 
 /* ADDITIONAL FUNCTIONS TO UPDATE STATES */
 const updateUserInList = (state: AdminState, updatedUser: User): void => {
@@ -67,7 +57,6 @@ const updateUserInState = (state: AdminState, updatedUser: User): void => {
 };
 
 /* ASYNC THUNKS */
-
 export const getUsers = createAsyncThunk<
     UsersMetaResponse,
     void,
@@ -76,8 +65,7 @@ export const getUsers = createAsyncThunk<
     "admin/getUsers",
     async (_, { getState, rejectWithValue }) => {
         try {
-            const state = getState() as { admin: AdminState };
-            const filters = state.admin.filters;
+            const { filters } = (getState() as { admin: AdminState }).admin;
             return await fetchUsers(filters);
         } catch (error: unknown) {
             const message = extractErrorMessage(error, "Ошибка загрузки пользователей");
@@ -126,8 +114,8 @@ export const toggleBlockUser = createAsyncThunk<
     "admin/toggleBlockUser",
     async (id, { getState, rejectWithValue }) => {
         try {
-            const state = getState() as { admin: AdminState };
-            const user = state.admin.users.find(u => u.id === id);
+            const { users } = (getState() as { admin: AdminState }).admin;
+            const user = users.find(u => u.id === id);
 
             if (user?.isBlocked) {
                 return await unblockUser(id);
@@ -175,7 +163,6 @@ export const updateUserRights = createAsyncThunk<
 );
 
 /* SLICE */
-
 const adminSlice = createSlice({
     name: "admin",
     initialState,
@@ -210,14 +197,8 @@ const adminSlice = createSlice({
             })
             .addCase(getUsers.fulfilled, (state, action) => {
                 state.loading = false;
-
-                if (action.payload.data === null) {
-                    state.users = [];
-                    state.pagination.total = action.payload.meta?.totalAmount || 0;
-                } else {
-                    state.users = action.payload.data || [];
-                    state.pagination.total = action.payload.meta?.totalAmount || 0;
-                }
+                state.users = action.payload.data || [];
+                state.pagination.total = action.payload.meta?.totalAmount || 0;
             })
             .addCase(getUsers.rejected, (state, action) => {
                 state.loading = false;

@@ -2,15 +2,13 @@ import { Menu } from "antd";
 import { CheckSquareOutlined, TeamOutlined } from "@ant-design/icons";
 import { Link, useLocation } from "react-router-dom";
 import { useAppSelector } from "../../store/hooks";
-import { hasRole } from "../../utils/roleUtils";
-import { Roles } from "../../types/types";
+import { selectHasAdminOrModeratorRole } from "../../features/auth/authSlice";
 
 export default function AppMenu() {
     const location = useLocation();
-    const { profile, isAuthorized } = useAppSelector((state) => state.auth);
+    const hasAdminAccess = useAppSelector(selectHasAdminOrModeratorRole);
 
-    // FOR USERS
-    const baseMenuItems = [
+    const menuItems = [
         {
             key: "/",
             icon: <CheckSquareOutlined />,
@@ -18,20 +16,17 @@ export default function AppMenu() {
         }
     ];
 
-    // FOR ADMINS AND MODS ONLY
-    const adminMenuItems = hasRole(profile.data?.roles, [Roles.ADMIN, Roles.MODERATOR])
-        ? [
-            {
-                key: "/users",
-                icon: <TeamOutlined />,
-                label: <Link to="/users">Пользователи</Link>
-            }
-        ]
-        : [];
+    if (hasAdminAccess) {
+        menuItems.push({
+            key: "/users",
+            icon: <TeamOutlined />,
+            label: <Link to="/users">Пользователи</Link>
+        });
+    }
 
-    const menuItems = isAuthorized ? [...baseMenuItems, ...adminMenuItems] : baseMenuItems;
-
-    const selectedKey = location.pathname === "/" ? "/" : location.pathname;
+    const selectedKey = menuItems.find(item =>
+        location.pathname === item.key || location.pathname.startsWith(item.key + '/')
+    )?.key || '/';
 
     return (
         <Menu

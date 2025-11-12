@@ -32,6 +32,10 @@ export default function RoleManagementModal({ visible, user, onCancel, onSave }:
         }
     }, [user]);
 
+    const hasNoRolesSelected = selectedRoles.length === 0;
+
+    const isCurrentUserAdmin = user?.username === "admin";
+
     const handleRoleChange = (role: Roles, checked: boolean) => {
         if (checked) {
             setSelectedRoles(prev => [...prev, role]);
@@ -41,13 +45,11 @@ export default function RoleManagementModal({ visible, user, onCancel, onSave }:
     };
 
     const handleSave = () => {
-        if (selectedRoles.length === 0) {
+        if (hasNoRolesSelected) {
             return;
         }
         onSave(selectedRoles);
     };
-
-    const isCurrentUser = user?.username === "admin";
 
     return (
         <Modal
@@ -58,7 +60,7 @@ export default function RoleManagementModal({ visible, user, onCancel, onSave }:
             okText="Сохранить"
             cancelText="Отмена"
             width={600}
-            okButtonProps={{ disabled: selectedRoles.length === 0 }}
+            okButtonProps={{ disabled: hasNoRolesSelected }}
         >
             {user && (
                 <Space direction="vertical" style={{ width: '100%' }} size="middle">
@@ -78,7 +80,7 @@ export default function RoleManagementModal({ visible, user, onCancel, onSave }:
                         </Space>
                     </div>
 
-                    {isCurrentUser && (
+                    {isCurrentUserAdmin && (
                         <Alert
                             message="Внимание"
                             description="Вы редактируете роли текущего пользователя. Изменения вступят в силу после перезагрузки страницы."
@@ -96,7 +98,7 @@ export default function RoleManagementModal({ visible, user, onCancel, onSave }:
                                 <Checkbox
                                     checked={selectedRoles.includes(role)}
                                     onChange={(e) => handleRoleChange(role, e.target.checked)}
-                                    disabled={isCurrentUser && role === Roles.ADMIN}
+                                    disabled={isCurrentUserAdmin && role === Roles.ADMIN}
                                 >
                                     <Space direction="vertical" size="small">
                                         <Tag color={ROLE_COLORS[role]}>{role}</Tag>
@@ -109,7 +111,7 @@ export default function RoleManagementModal({ visible, user, onCancel, onSave }:
                         )}
                     />
 
-                    {selectedRoles.length === 0 && (
+                    {hasNoRolesSelected && (
                         <Alert
                             message="Предупреждение"
                             description="Пользователь должен иметь хотя бы одну роль."

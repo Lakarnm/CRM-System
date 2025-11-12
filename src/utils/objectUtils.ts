@@ -15,12 +15,34 @@ export function getChangedFields<T extends object>(
 }
 
 function isEqual(a: unknown, b: unknown): boolean {
-    if (a === b) return true;
-    if (a == null || b == null) return a === b;
-    if (typeof a !== typeof b) return false;
+    if (a === b) {
+        return true;
+    }
+
+    if (a == null || b == null) {
+        return a === b;
+    }
+
+    if (typeof a !== typeof b) {
+        return false;
+    }
 
     if (Array.isArray(a) && Array.isArray(b)) {
-        return a.length === b.length && a.every((item, index) => item === b[index]);
+        if (a.length !== b.length) {
+            return false;
+        }
+        return a.every((item, index) => isEqual(item, b[index]));
+    }
+
+    if (typeof a === 'object' && typeof b === 'object') {
+        const keysA = Object.keys(a);
+        const keysB = Object.keys(b);
+
+        if (keysA.length !== keysB.length) {
+            return false;
+        }
+
+        return keysA.every(key => (a as any)[key] === (b as any)[key]);
     }
 
     return a === b;
